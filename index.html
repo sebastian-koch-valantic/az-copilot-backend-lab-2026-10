@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>GitHub Copilot Lab | valantic</title>
+  <link href="https://fonts.googleapis.com/css2?family=Maven+Pro:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+/* valantic CI — design tokens. Single source of truth. Do not hardcode these values elsewhere. */
+:root {
+  /* Gradient */
+  --val-coral:    #ff4b4b;
+  --val-peach:    #ff744f;
+  --val-gradient: linear-gradient(135deg, #ff4b4b, #ff744f);
+
+  /* Base */
+  --val-black:    #100c2a;
+  --val-white:    #ffffff;
+  --val-offwhite: #f7f7f7;   /* page background (light) · text (dark) */
+
+  /* Secondary */
+  --val-indigo:   #193773;
+  --val-blue:     #3c4bc8;
+  --val-purple:   #5b26b7;
+
+  /* Tertiary */
+  --val-gold:     #c0aa81;
+  --val-silver:   #cdcdcd;
+  --val-lavender: #a78db6;
+
+  /* Dark Indigo scale */
+  --val-indigo-50:  #f6f6f9;
+  --val-indigo-100: #eeedf3;
+  --val-indigo-200: #d2cede;
+  --val-indigo-800: #201c38;
+
+  /* Theme-aware tokens — use these in all components, never hardcode bg/text colors */
+  --bg:           var(--val-offwhite);
+  --text:         var(--val-black);
+  --text-sub:     var(--val-indigo);
+  --border:       #f0eeee;
+  --card-bg:      var(--val-white);   /* cards lift off the #f7f7f7 page */
+}
+
+/* Dark theme — add class="dark" to <html> */
+.dark {
+  --bg:       var(--val-black);
+  --text:     var(--val-offwhite);
+  --text-sub: var(--val-offwhite);
+  --border:   rgba(255,255,255,0.08);
+  --card-bg:  rgba(255,255,255,0.04);
+}
+
+:root {
+  --sp-1:  8px;   --sp-2: 16px;  --sp-3: 24px;  --sp-4: 32px;
+  --sp-6: 48px;   --sp-8: 64px;  --sp-10: 80px;
+
+  /* Page layout (web pages, HTML artifacts, reports, dashboards) */
+  --content-max: 1280px;   /* max width of the content area */
+  --gutter:      40px;     /* left/right padding of the content area */
+  --section-gap: 64px;     /* top/bottom spacing between sections (= --sp-8) */
+
+  /* Column grid */
+  --grid-cols:   12;
+  --grid-gap:    24px;     /* column gutter */
+}
+
+/* valantic CI — base styles: layout, typography, label, divider, badge, buttons. Always included by build.py. */
+*, *::before, *::after { box-sizing:border-box; }
+body { margin:0; }
+
+/* Layout */
+.container { max-width:var(--content-max); margin:0 auto; padding-left:var(--gutter); padding-right:var(--gutter); }
+section    { padding-top:var(--section-gap); padding-bottom:var(--section-gap); }
+
+.grid      { display:grid; grid-template-columns:repeat(var(--grid-cols), minmax(0,1fr)); gap:var(--grid-gap); }
+.span-3  { grid-column:span 3; }   .span-4 { grid-column:span 4; }
+.span-6  { grid-column:span 6; }   .span-8 { grid-column:span 8; }   .span-12 { grid-column:span 12; }
+
+@media (max-width:1024px) {
+  :root { --grid-cols:8; --gutter:24px; }
+  .span-3 { grid-column:span 4; } .span-4, .span-6, .span-8 { grid-column:span 8; } .span-12 { grid-column:span 8; }
+}
+@media (max-width:640px) {
+  :root { --grid-cols:4; --gutter:16px; }
+  .span-3, .span-4, .span-6, .span-8, .span-12 { grid-column:span 4; }
+}
+
+/* Typography & UI basics */
+body  { font-family:'Maven Pro',sans-serif; font-size:17px; font-weight:400; line-height:1.5; color:var(--text); background:var(--bg); }
+h1    { font-size:72px; font-weight:400; line-height:72px; margin-bottom:var(--sp-2);
+        background:var(--val-gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+        padding-bottom:0.22em; margin-bottom:calc(var(--sp-2) - 0.22em);   /* room for descenders (g, y, p) — the gradient is only painted inside the box */
+        -webkit-box-decoration-break:clone; box-decoration-break:clone; }
+h1 + p, h1 + ul, h1 + ol { margin-top:max(0px, calc(1em - var(--sp-2))); }   /* keeps the previous H1 → text spacing despite the descender padding */
+h2    { font-size:48px; font-weight:400; line-height:48px; margin-top:var(--sp-6); margin-bottom:var(--sp-2); color:var(--text); }
+h3    { font-size:24px; font-weight:400; line-height:32px; margin-top:var(--sp-4); margin-bottom:var(--sp-2); color:var(--text-sub); }
+p     { font-size:17px; line-height:1.5; margin-bottom:var(--sp-2); }
+strong{ font-weight:600; color:var(--text-sub); }
+
+/* Route B/C: SemiBold headings — add .route-bc class to <body>. Only 600 for headlines, badges and labels (never 700) */
+.route-bc h1, .route-bc h2, .route-bc h3 { font-weight:600; }
+.route-bc h3, .route-bc strong { color:var(--val-purple); }   /* Route B/C light: H3 and emphasis in purple */
+.dark .route-bc h3, .dark.route-bc h3, .route-bc .dark h3 { color:var(--val-lavender); }   /* Route B/C dark: H3 in lavender */
+.dark .route-bc strong { color:var(--text-sub); }       /* Route B/C dark: emphasis stays off-white */
+
+/* Label / eyebrow */
+.label { font-size:15px; font-weight:600; letter-spacing:.15em; text-transform:uppercase;
+         color:var(--val-coral); display:block; margin-bottom:var(--sp-1); }
+.label + h1, .label + h2, .label + h3 { margin-top:0; }
+
+/* Label directly above an H1, H2 or H3 — route/theme color (a label without a following heading stays coral) */
+.label:has(+ h1, + h2, + h3)                  { color:var(--val-indigo); }    /* Route A · light */
+.route-bc .label:has(+ h1, + h2, + h3)        { color:var(--val-purple); }    /* Route B/C · light */
+.route-bc .label:has(+ h3)                    { color:var(--val-black); }     /* Route B/C · light · above H3 only */
+.dark .label:has(+ h1, + h2, + h3)            { color:var(--val-gold); }      /* Route A · dark */
+.dark .route-bc .label:has(+ h1, + h2, + h3), .dark.route-bc .label:has(+ h1, + h2, + h3), .route-bc .dark .label:has(+ h1, + h2, + h3) { color:var(--val-lavender); }  /* Route B/C · dark */
+.dark .route-bc .label:has(+ h3), .dark.route-bc .label:has(+ h3), .route-bc .dark .label:has(+ h3) { display:inline-block; background:var(--val-gradient);   /* Route B/C · dark · above H3: gradient */
+                                                -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+/* Divider — fully opaque: no transparent fade, no opacity */
+/* Divider — only at a chapter change, never between every section. Sits between two <section>s (spacing comes from the section padding).
+   Always as wide as the 12-column grid (content width), never edge to edge. */
+.divider { --dv:var(--val-gradient); height:1px; width:min(calc(var(--content-max) - 2 * var(--gutter)), calc(100% - 2 * var(--gutter))); margin:0 auto; background:var(--dv); }   /* = content width of .container */
+.container .divider, .grid .divider { width:100%; }   /* inside the grid container: full content width */
+.divider--subtle { --dv:var(--val-silver); }                                  /* restrained: neutral line */
+.dark .divider--subtle { --dv:rgba(255,255,255,0.16); }
+
+/* Badge — always use these classes; colors come from tokens */
+.badge, .badge-outline, .badge-neutral { display:inline-flex; align-items:center; gap:var(--sp-1); font-size:12px; font-weight:600;
+                 letter-spacing:.15em; text-transform:uppercase; padding:4px 10px; border-radius:99px;
+                 background:var(--val-gradient); color:var(--val-white); }   /* variants work alone too: class="badge-outline" = class="badge badge-outline" */
+.badge-outline { background:transparent; border:none; color:var(--val-coral);
+                 box-shadow:inset 0 0 0 1.5px var(--val-coral); }                        /* line drawn inside → same size as the other badges */
+.badge-neutral { background:var(--val-white); border:none; color:var(--val-indigo);
+                 box-shadow:inset 0 0 0 1px var(--val-silver); }                         /* white in both themes · light: 1px silver line so it stays visible on white cards */
+.dark .badge-neutral { box-shadow:none; }                                                /* dark: white on dark needs no line */
+.route-bc .badge-neutral { color:var(--val-purple); }                                  /* Route B/C: purple text */
+
+/* Buttons — same font size as body text */
+.btn         { display:inline-flex; align-items:center; gap:var(--sp-1); font-family:'Maven Pro',sans-serif;
+               font-size:17px; font-weight:600; line-height:1.2; padding:12px 24px; border-radius:99px;
+               text-decoration:none; cursor:pointer; border:0; }
+.btn-primary { background:var(--val-gradient); color:var(--val-white); }
+/* Small button (.btn-sm): 36px high — for actions inside table rows, lists and compact cards; combine with -primary / -secondary / -outline */
+.btn.btn-sm { min-height:36px; height:36px; padding:0 16px; gap:8px; font-size:17px; line-height:1; }
+.btn.btn-sm .ph { font-size:18px; }
+
+/* Outline button — colors per route/theme as variables, so they work on html/body or any wrapper */
+.btn-outline { --btn-o-line:var(--val-indigo); --btn-o-text:var(--val-indigo);                               /* Route A · light */
+               background:transparent; border:1.5px solid var(--btn-o-line); color:var(--btn-o-text); }
+.dark .btn-outline     { --btn-o-line:var(--val-gold);   --btn-o-text:var(--val-gold); }                    /* Route A · dark */
+.route-bc .btn-outline { --btn-o-line:var(--val-purple); --btn-o-text:var(--val-purple); }                  /* Route B/C · light */
+.dark .route-bc .btn-outline, .dark.route-bc .btn-outline, .route-bc .dark .btn-outline
+                       { --btn-o-line:var(--val-lavender); --btn-o-text:var(--val-offwhite); }              /* Route B/C · dark */
+/* Secondary button — use when two buttons sit side by side (second, less important action).
+   Route A (light + dark): solid indigo · Route B/C (light + dark): solid purple · text always off-white */
+.btn-secondary { background:var(--val-indigo); border:1.5px solid var(--val-indigo); color:var(--val-offwhite); }
+.route-bc .btn-secondary { background:var(--val-purple); border-color:var(--val-purple); }
+
+/* Small screens: scale headlines down so long titles don't break word by word */
+@media (max-width:640px) {
+  h1 { font-size:48px; line-height:48px; }
+  h2 { font-size:32px; line-height:40px; }
+}
+
+/* Screen-reader only text (e.g. headers of action columns) */
+.visually-hidden { position:absolute !important; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+
+/* Phosphor icons — Light weight (inlined subset) */
+@font-face { font-family:"Phosphor-Light"; font-display:block; src:url(data:font/woff;base64,d09GRgABAAAAAAzMAAwAAAAAFpQAAgABAAAAAAAAAAAAAAAAAAAAAAAAAABHU1VCAAAMsAAAABoAAAAabIx0hU9TLzIAAAGMAAAAQQAAAGDwLw0OY21hcAAAAfgAAAB4AAAAvBA5/+pnYXNwAAAMqAAAAAgAAAAIAAAAEGdseWYAAAKYAAAJiQAAEuTJgkYyaGVhZAAAARwAAAA2AAAANid3e0JoaGVhAAABVAAAACAAAAAkB8ID6mhtdHgAAAHQAAAAJQAAACgIiAQobG9jYQAAAnAAAAAoAAAAKCW3KchtYXhwAAABdAAAABgAAAAgABsA3m5hbWUAAAwkAAAAdQAAALYKXSVicG9zdAAADJwAAAAMAAAAIAADAAAAAQAAAAIZmroKMplfDzz1AAsEAAAAAADiLA6WAAAAAOIsDpYAKAAHA9gDeAAAAAgAAgAAAAAAAHicY2BkYGA+8P8AAwMLA4MGgwbzDQagCApgBABjJwO1eJxjYGRgYBBmuMPAzgACTAxoAAAYfwD6eJxjYGZhYJzAwMrAwDST6QwDA0M/hGZ8zWDMyMmABgTQBRweyr1RYT7w/wCDAzMQA0UYQcJANggoMDAAAEV5DDAAAAB4nGNhAIIMIFzJ0MnQwaDBsAIMO8BYAyjewdDO4M6QAQCivAi1AAAAeJxjYGBgYmBgYAZiESDJCKZZGFYAaTUGBSCL7aHcQ5WHZg+bHp56pPDI6pHLo6ZHhx7defTh6bRnVs/nvbrzOuqNyv//DAzEqZN7LHdP7qxck5y17DPZs7JHZNtlPWT1ZWWkyiWvSBSKmohsF34HdgURAAAaHkIEAAAAAACJAQsBPwFxAbECYwLRAzQD0AQ1BPAFNQYvBs4HSggLCTQJcnicrVhbbFtJGZ7LudgnyUl8PY6dpLFPbefiYI/vRWnjdtu0NKXrlkKjQqu2AW0QhXQlQNlqK0VCLKVabbtIqFXRQh+KFOjL7gNi0YrFQkJa8UJ4gBbxksdIQBcJrVQJfMo/M+fEdm8rsVg6Z/7zz8w/M///zX8xomgZTdCbdBGNod3oHEI4pWuarkXCVjRqRUvFWrVaq1ZYOZvJZDM2C6QEUSkLfqkoRkVYWEyyWSgajYQ1ncGnncpkGQyulGFY1GIWzBAEQScWDq+Mw2/l8MKJbnph775zoyMjo+f27V3opt+hikJvU7+q+qGhpqH46bVr8psuPilH0m30pCRJ4195sqRcxTApFwhfCPVq5Ev/H41IZUitgEJq7JMoQzUNTSpAbPz2J1DELurXDFPlwqRahUoQRj9DW/QkOQk6QBi7xsQdY2Is9s9tTY85LbkDaKUQnMd5d3MkD1wQiRsuw/kj9MlhIBp9H12hN8gv0Y6udbpB01mH0TcdJBfadAX8AX/oLXMN+mCZTfeb97iLUHQFHaKrtA5r2GgG1kmmtAiL2PwdCEdLLFkEc1ZK/B0oZ2yaDCRDNqdYspKkZx1kmOuGaRrEI+47BbzRum4azn28QeumsQ4k4j3rclS7gTecf+IJw7yOFDQBZ7xPHqIKOo2+hl6BHXDASPhIbIkXIAxOzNHTDTTxqlbKmSyWQOOvLDBZtRtw/GVJOTTFJYnjwBkCKVeZAEnNpn/G5Xrctk/Vanv31mqnbDteL2PxewbfmcrncsfTmdRIPoTD+ZFUJn08l8t3Mf1joy8tHP7KkQsXjvCn3mzW+YN/T07X44l4zoRfDoj6aUJUSlXyLL7zwO9LxYdTiTmbphuJ1HA85fN3WMHc9Ck7hVtymSMXnJZcqN5EKlqHO7sIdzaGEoihfehzoGXQlJ3stTJYFfBl2aEkqAW+qsDnymKlANcOPCwpFQbjo5HI4wx6DBCmOmtWMmmRhpVU6F/eeGO93aKqSvGyaXyg0ium8UhgAYt3hyYvb1IlabUbYjICHP/wjfamSgnM/sAwnRhV8SE+mD9rHoGIONtNOotycC4UApwEXPNWqtzuQHKEBAoFbu8U3BRNwkTX8DalB6oSJYCotxWFyz5x4zhbrk1+foY7FNVHT946MTUzc6ZYJN+BrszE5ImZXL5DkX8pfq19lu/pF/szE7HpHVlqqHgTrhs5kp6KhEJ9ptn+2/7MZDAYHNT0MfzTA5nJUDAwpOujwkKH4BR1NIqm0S70DfQqWEjsl8PeCmgeaMFC2QCch9ll9+rbDCwQCru+s8SAma6I02azcobNxG32YF+Bc0YKBWB0S7X1nquAb84Xi/PVSTxZ2yZaU2NjU/y57hF4w+y/8xo/dEta5I6mbU+IyTFTY6RVnJ8vTu/zYefv/n3T3gcOw4c3xkEe9e2N4Hj/HWleIfW1O5rpwxu+7Zm/9pYH60vvtQjWb3IfmREmBlcJB2Q9/ivSQblUDrW7VGMLZrUmHaqFhYYYo8tOyxfu7w/7nJbul0C9Lhu/Pr4hNrgBbqCBKSGUt5j4cEP3+3Ux0RFA3doSIF/jYi4Kegsvu8PBhbRgMvjBdeSDO7qKhtAL6BL6EULpx69XqBAG0+jcF25fPcZtxyAkMBlha8WiF2T5AWx+LNeXpuyS5sbqqFVyT9hRiwi8gKxCmTHhRWFCquN1YRiI5gPK5Qoj74JPF9bBDcO8fXAW9w8lrUfISg4OzB6Kx7+4Z/c8UcjBubnTiUTBijWr1d3wjWcrlaNWdE8JR4bBJSCqDkfLu5sD5/eD4rBh9vnLL/rJgB8+/H3j3iUnCB9/PY+N0WCMO4dYYMzIv358fs+eMyMjJJE4PTd3cHe1esyy8HDsWKU6O786GWCjMe51YqMsMPnKPN554Hw/Ng3/APE1y/4+uQQS0W+drpL7oPVxVAAEPa7zdNK9QkkZN7DbMpdPV02j3RC7BHW0J4hQisfp9ICiWt55tmQDTq3gUYDkCYHkVciv/iRioPRVXkpU4naNWpWoe4cFdKsiiHHzc+syGSMrEtHbAoQF+exqze6ytrwETO8Gks2Au71sloGlZabRWRbU4joMDjoYEOmkINKdCA/iLR8OuwASy9OvU02BUOYPGTvL+RQG4BthH4Q3w0xatzC2wsFCgqikchjjW1ZSHdBGS6FA+DMVGKINaFhGFU1Nq5QHFdOQsuwiLe/0BKn0PcPEhKq0aKdLioKJabwHUBjQqkeVcCBUGtX7NYznCMFEUco7YbIKgwAcdzsrKkercr2r7qZgLsZXOfruan30Nxxad/kyilJIEUJ2lj0ZnV1hgLud794YCDsMRyGJQjBsYYy0rlz6U2gWfRadQSsfm1GHZL7DarKYKKV7AgHWXc1npSerqJYLAV3kjTU7VJPWYJa0cuTZSfYPguFw8PJkoTCFna966QT+1mVr1/j4Luty/tL+/ZfyjnK5MyzV2/ecrPthz8B/bOdFg8+W1rPSdua6CHnrLK/N0rRS6r2srBShEpRJF7OYOzhwexAPoOFqCfEkIGOroAzgyKtfgQJEuLyCuDa6Feb6jTB68eEEv6/S8008VCBhIZDtKIpzAJPrBP8kvbJQOpvD/wbjt9cgY/nmzJdr9TNZjCOTIfwCxm/htx54d/6Bs6QN+jimfIMavko1+tFH8HIeGkYmPvwfnvYBpn6rRUdGohDTLsIHd1oa+h5ahnNbrs96ETBz7X/wXFjPZrwEg7mJEpPJNAdQ4Pnd7OP6uWN0bgvHB1mRcwWL3MjjdHrAWX644tVDDVnBrLnVCeeLAuwp/KeNf66LJbtWvNKqwYuhNVfGIwR8WTQ+yX/KeIR0dBDp9F3w1V9AL0HFcg39HP0O/bXjtV3V6D0q8koYl5D6chXntgKiWbeg6RC9lR8MrulZt0K23H8UuopPq1NSq9UnWK4M9rRq0pWlPj5a9NJ3pK7vJQLTw8O5oaUdrj52LA2FQkOJe64On90POnQ+bcQHB+PGotHXZyy9/92l95e6GM4NDC7U10/G3dbZJP3gPElT90EUFS3EjFwXkyqS+Qg9NpW+zNe7l+Brw1akHWErueHh6QBsRuLqOf38rO1X+bYW5Rbd7XYY+DxRwK/79Cbshrc/5jsZh91BZBAt4VXbU5gP3AlNV4D4V2UZIkEMhaAOn/aq8J7KzMaiICsFeEaQFLc9wO85o2fdoqnF3+26StfXIQRtqNSJ4S0IhDHgtryarH2FNKjaflvUlE2V/hdq7AKoAAAAeJxjYGBgZ4hiYGZgZOFkYGCQAWIImxHIloGymRj4GCygbGYkcRYkNiuDGIMblM0GFg9gyGDIZyhmKADTRQwKDJ4MyUBWHlAMXU6XwYchkyEdyCthCGJIBbJKGXIYEoEyYUBeEVBlJlinAoMRgx6DIQCQFRPcAAAAeJxjYGbACwAAfQAEAAEAAf//AA8AAQAAAAoAFgAYAAFsYXRuAAgAAAAAAAAAAAAA) format("woff"); }
+.ph, .ph-light {
+  /* use !important to prevent issues with browser extensions that change fonts */
+  font-family: "Phosphor-Light" !important;
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+
+  /* Enable Ligatures ================ */
+  letter-spacing: 0;
+  -webkit-font-feature-settings: "liga";
+  -moz-font-feature-settings: "liga=1";
+  -moz-font-feature-settings: "liga";
+  -ms-font-feature-settings: "liga" 1;
+  font-feature-settings: "liga";
+  -webkit-font-variant-ligatures: discretionary-ligatures;
+  font-variant-ligatures: discretionary-ligatures;
+
+  /* Better Font Rendering =========== */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.ph.ph-caret-circle-down:before, .ph-light.ph-caret-circle-down:before { content:"\e11e"; }
+.ph.ph-caret-circle-up:before, .ph-light.ph-caret-circle-up:before { content:"\e124"; }
+.ph.ph-caret-down:before, .ph-light.ph-caret-down:before { content:"\e136"; }
+.ph.ph-check:before, .ph-light.ph-check:before { content:"\e182"; }
+.ph.ph-copy:before, .ph-light.ph-copy:before { content:"\e1ca"; }
+.ph.ph-eye:before, .ph-light.ph-eye:before { content:"\e220"; }
+.ph.ph-file-text:before, .ph-light.ph-file-text:before { content:"\e23a"; }
+.ph.ph-flag:before, .ph-light.ph-flag:before { content:"\e244"; }
+.ph.ph-flask:before, .ph-light.ph-flask:before { content:"\e79e"; }
+.ph.ph-git-pull-request:before, .ph-light.ph-git-pull-request:before { content:"\e282"; }
+.ph.ph-house:before, .ph-light.ph-house:before { content:"\e2c2"; }
+.ph.ph-lifebuoy:before, .ph-light.ph-lifebuoy:before { content:"\e63a"; }
+.ph.ph-lightbulb:before, .ph-light.ph-lightbulb:before { content:"\e2dc"; }
+.ph.ph-list:before, .ph-light.ph-list:before { content:"\e2f0"; }
+.ph.ph-list-checks:before, .ph-light.ph-list-checks:before { content:"\eadc"; }
+.ph.ph-plugs-connected:before, .ph-light.ph-plugs-connected:before { content:"\eb5a"; }
+.ph.ph-puzzle-piece:before, .ph-light.ph-puzzle-piece:before { content:"\e596"; }
+.ph.ph-sidebar-simple:before, .ph-light.ph-sidebar-simple:before { content:"\ec24"; }
+/* component: accordion */
+/* valantic CI · components/accordion
+   Native <details>/<summary>. Accent per route/theme via descendant selectors. Tokens only. */
+.accordion {
+  /* Route A · light — mirrors H3: Regular 400 in --text-sub, accent indigo */
+  --acc-line:   var(--val-indigo);
+  --acc-title:  var(--text-sub);
+  --acc-weight: 400;
+  --acc-closed: rgba(16,12,42,0.05);              /* black 5 % */
+  --acc-open:   var(--val-white);
+  display:flex; flex-direction:column; gap:20px; max-width:1060px;
+}
+/* Route B/C · light — SemiBold 600, purple */
+.route-bc .accordion { --acc-line:var(--val-purple); --acc-title:var(--val-purple); --acc-weight:600; }
+/* Route A · dark — gold accent, title in --text-sub (off-white) */
+.dark .accordion { --acc-line:var(--val-gold); --acc-closed:rgba(255,255,255,0.06); --acc-open:rgba(255,255,255,0.10); }
+/* Route B/C · dark — lavender */
+.dark .route-bc .accordion, .dark.route-bc .accordion, .route-bc .dark .accordion { --acc-line:var(--val-lavender); --acc-title:var(--val-lavender); }
+
+.accordion__item { border-radius:15px; background:var(--acc-closed); transition:background .2s ease, box-shadow .2s ease; }
+.accordion__item[open] {
+  background:var(--acc-open);
+  box-shadow:inset 5px 0 0 var(--acc-line), 0 0 30px 0 rgba(16,12,42,0.08);   /* 5px line left, inside the radius */
+}
+
+/* Header row: label + round control (closed: pl 40 · pr 20 · py 20 → 85px high) */
+.accordion__head {
+  display:flex; align-items:center; justify-content:space-between; gap:var(--sp-2);
+  padding:20px 20px 20px 40px; cursor:pointer; list-style:none; border-radius:15px;
+  font-size:22px; line-height:32px; font-weight:var(--acc-weight); color:var(--acc-title);
+}
+.accordion__head::-webkit-details-marker { display:none; }
+.accordion__head::marker { content:""; }
+.accordion__control { flex:none; font-size:45px; line-height:1; color:var(--acc-line); transition:color .15s; }   /* Phosphor ph-caret-circle-down */
+.accordion__head:hover .accordion__control { color:var(--val-coral); }
+.accordion__head:focus-visible { outline:2px solid var(--acc-line); outline-offset:3px; }
+
+/* Open: card with padding 40, label + copy (gap 10), control hidden — the label row closes it */
+.accordion__item[open] .accordion__head { padding:40px 40px 0 45px; }
+.accordion__item[open] .accordion__control { display:none; }
+.accordion__body { padding:10px 40px 40px 45px; font-size:22px; line-height:32px; font-weight:400; color:var(--text); }
+.accordion__body p, .accordion__body li { font-size:inherit; line-height:inherit; }   /* base.css sets p to 17px */
+.accordion__body > :first-child { margin-top:0; }
+.accordion__body > :last-child { margin-bottom:0; }
+
+/* Smooth opening where the browser supports it (progressive) */
+@supports (interpolate-size: allow-keywords) {
+  .accordion { interpolate-size:allow-keywords; }
+  .accordion__item::details-content { height:0; overflow:hidden; transition:height .25s ease, content-visibility .25s allow-discrete; }
+  .accordion__item[open]::details-content { height:auto; }
+}
+
+@media (max-width:1024px) {
+  .accordion__head, .accordion__body { font-size:17px; line-height:1.5; }
+  .accordion__head { padding:16px 16px 16px 24px; }
+  .accordion__item[open] .accordion__head { padding:24px 24px 0 29px; }
+  .accordion__body { padding:8px 24px 24px 29px; }
+  .accordion__control { font-size:40px; }
+}
+@media print { .accordion__control { display:none; } }
+
+/* component: checklist */
+/* valantic CI · components/checklist — tickable items. Accent per route/theme via variables. Tokens only. */
+.checklist {
+  --cl-acc: var(--val-indigo); --cl-on-acc: var(--val-offwhite); --cl-line: var(--val-silver);   /* Route A · light */
+  list-style:none; margin:var(--sp-3) 0 0; padding:0; display:grid; gap:var(--sp-1);
+}
+.dark .checklist     { --cl-acc:var(--val-gold); --cl-on-acc:var(--val-black); --cl-line:rgba(255,255,255,0.32); }
+.route-bc .checklist { --cl-acc:var(--val-purple); }
+.dark .route-bc .checklist, .dark.route-bc .checklist, .route-bc .dark .checklist { --cl-acc:var(--val-lavender); }
+
+.checklist__item { display:flex; gap:12px; align-items:flex-start; cursor:pointer; font-size:17px; line-height:24px; color:var(--text); }
+.checklist__input { position:absolute; opacity:0; width:1px; height:1px; margin:0; }
+.checklist__box {
+  flex:none; display:flex; align-items:center; justify-content:center; box-sizing:border-box; width:24px; height:24px; margin-top:0;
+  border:1.5px solid var(--cl-line); border-radius:6px; background:transparent; color:var(--cl-on-acc); transition:background .15s, border-color .15s;
+}
+.checklist__box .ph { font-size:16px; visibility:hidden; }
+.checklist__item:hover .checklist__box { border-color:var(--cl-acc); }
+.checklist__input:checked + .checklist__box { background:var(--cl-acc); border-color:var(--cl-acc); }
+.checklist__input:checked + .checklist__box .ph { visibility:visible; }
+.checklist__input:checked ~ .checklist__text { color:var(--text-sub); text-decoration:line-through; text-decoration-thickness:1px; }
+.checklist__input:focus-visible + .checklist__box { outline:2px solid var(--cl-acc); outline-offset:2px; }
+.checklist__input:disabled + .checklist__box { opacity:.4; }
+
+/* Read-only variant: items as a list of requirements with a check icon, nothing to tick */
+.checklist--static .checklist__item { cursor:default; }
+.checklist--static .checklist__box { border:0; background:none; color:var(--cl-acc); }
+.checklist--static .checklist__box .ph { visibility:visible; font-size:22px; }
+
+/* component: navigation-sidebar */
+/* ==========================================================================
+   valantic CI · components/navigation-sidebar · style.css
+   Alternative Navigation: vertikale Seitenleiste, ein- und ausklappbar
+   Benötigt: core/tokens.css (--val-*, --val-indigo-50/800, --gutter) · core/base.css
+   Zustände: html.dark (Theme) · body.route-bc (Route B/C) · body.sb-collapsed (eingeklappt)
+   ========================================================================== */
+:root { --sb-w:280px; --sb-w-icons:80px; }
+/* Akzentfarbe der Seitenleiste: Icons, Pfeile, Titel und Linie des aktiven Eintrags – bleibt in allen Zuständen gleich */
+body { --sb-acc:var(--val-indigo); }                 /* Route A · light */
+body.route-bc { --sb-acc:var(--val-purple); }       /* Route B/C · light */
+.dark body { --sb-acc:var(--val-gold); }
+.dark body.route-bc { --sb-acc:var(--val-lavender); }
+body { --sb-current:var(--sb-w); }
+body.sb-collapsed { --sb-current:var(--sb-w-icons); }
+
+.sb { position:fixed; z-index:60; top:0; bottom:0; left:0; width:var(--sb-current);
+      padding:calc(env(safe-area-inset-top, 0px) + 24px) 16px calc(env(safe-area-inset-bottom, 0px) + 24px);
+      display:flex; flex-direction:column; gap:var(--sp-3);
+      background:var(--val-white); box-shadow:0 0 30px 0 rgba(16,12,42,0.08);
+      transition:width .25s ease; overflow:visible; }
+.dark .sb { background:linear-gradient(rgba(255,255,255,0.04), rgba(255,255,255,0.04)), var(--val-black); box-shadow:0 0 30px 0 rgba(0,0,0,0.4); }
+
+.sb__head { display:flex; align-items:center; justify-content:space-between; gap:var(--sp-1); min-height:45px; padding:0 0 0 16px; }
+.sb__logo { display:flex; align-items:center; }
+.sb__logo-full { width:112px; height:auto; display:block; }
+.sb__logo-mark { width:28px; height:auto; display:none; }
+.sb__toggle { display:flex; align-items:center; justify-content:center; width:40px; height:40px; flex-shrink:0;
+              border:0; border-radius:80px; cursor:pointer; background:var(--val-indigo-50); color:var(--val-indigo-800); }
+.sb__toggle i { font-size:20px; transition:transform .25s; }
+.sb__toggle:hover i { color:var(--val-coral); }
+.dark .sb__toggle { background:rgba(255,255,255,0.08); color:var(--val-offwhite); }
+
+.sb__title { margin:0; padding:0 16px; font-size:16px; font-weight:600; line-height:32px; letter-spacing:2px; text-transform:uppercase;
+             color:var(--sb-acc); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sb__nav { flex:1; overflow-y:auto; overflow-x:visible; margin:0 -16px; padding:0 16px; }
+.sb__list, .sb__sub { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+.sb__item { position:relative; }
+.sb__link { display:flex; align-items:center; gap:12px; width:100%; min-height:45px; padding:8px 16px;
+            font-family:'Maven Pro',sans-serif; font-size:16px; font-weight:400; line-height:28px; text-align:left;
+            color:var(--val-indigo-800); background:none; border:0; border-radius:8px; text-decoration:none; cursor:pointer; }
+.dark .sb__link { color:var(--val-offwhite); }
+.sb__link > i:first-child { font-size:20px; flex-shrink:0; color:var(--sb-acc); }
+.sb__text { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sb__caret { display:inline-block; flex-shrink:0; font-size:16px; color:var(--sb-acc); transition:transform .2s; }
+.sb__link[aria-expanded="true"] .sb__caret { transform:rotate(90deg); }   /* zu: Pfeil nach rechts · auf: Pfeil nach unten */
+/* Hover: Off-White-Fläche · Fokus/aktiv: zusätzlich abgerundete Linie links, die der Form folgt */
+.sb__link:hover, .sb__link:focus-visible, .sb__link.is-active { background:var(--val-offwhite); outline:none; }
+.sb__link:focus-visible, .sb__link.is-active { font-weight:600; box-shadow:inset 3px 0 0 0 var(--sb-acc); }   /* Linie in der Farbe der Route */
+/* Dark Theme: gleiche Logik, eigene Abstufung */
+.dark .sb__link:hover, .dark .sb__link:focus-visible { background:rgba(255,255,255,0.06); }
+.dark .sb__link.is-active { background:rgba(255,255,255,0.10); color:var(--val-offwhite); }
+.dark .sb__link.has-active { color:var(--val-offwhite); }
+.dark .sb__sub .sb__link:not(.is-active) { color:rgba(247,247,247,0.85); }
+.dark .sb__sub .sb__link:not(.is-active):hover { color:var(--val-offwhite); }
+.sb__link.has-active { font-weight:600; }
+.sb__sub { padding:2px 0 4px 32px; }
+.sb__sub[hidden] { display:none; }
+.sb__sub .sb__link { min-height:40px; padding:6px 16px; }
+
+.sb__foot { display:flex; flex-direction:column; gap:var(--sp-1); }
+.sb__contact { display:flex; align-items:center; justify-content:center; gap:8px; min-height:45px; padding:8px 16px; border-radius:80px;
+               text-decoration:none; background:var(--val-gradient); color:var(--val-indigo-50);
+               font-family:'Maven Pro',sans-serif; font-size:16px; font-weight:600; line-height:32px; white-space:nowrap; overflow:hidden; }
+.sb__contact i { font-size:20px; flex-shrink:0; }
+.sb__contact:hover { filter:brightness(1.06); box-shadow:0 4px 16px rgba(255,75,75,0.3); }
+
+/* Eingeklappt · nur Icons */
+.sb-collapsed .sb__head { flex-direction:column; padding:0; gap:var(--sp-2); }
+.sb-collapsed .sb__logo-full { display:none; }
+.sb-collapsed .sb__logo-mark { display:block; }
+.sb-collapsed .sb__title { visibility:hidden; height:0; line-height:0; }
+.sb-collapsed .sb__link { justify-content:center; padding:8px; gap:0; }
+.sb-collapsed .sb__text { display:none; }
+/* eingeklappt: kleiner Pfeil am Rand des Icons zeigt das Untermenü an */
+.sb-collapsed .sb__link[aria-controls] { position:relative; }
+.sb-collapsed .sb__caret,
+.sb-collapsed .sb__link > :not(.ph:first-child) { display:none; }   /* collapsed: only the icon, centred — no arrows, counters or badges */
+.sb-collapsed .sb__contact { padding:8px; }
+.sb-collapsed .sb__contact span { display:none; }
+/* Eingeklappt: Unterpunkte als Flyout, Tooltip im Icon-Modus */
+.sb-collapsed .sb__sub { position:absolute; left:calc(100% + 12px); top:0; min-width:220px; padding:var(--sp-1);
+                         background:var(--val-white); border-radius:12px; box-shadow:0 0 30px 0 rgba(16,12,42,0.12); z-index:5; }
+.dark.sb-collapsed .sb__sub, .dark .sb-collapsed .sb__sub { background:linear-gradient(rgba(255,255,255,0.06), rgba(255,255,255,0.06)), var(--val-black); }
+.sb-collapsed .sb__sub .sb__text { display:block; }
+.sb-collapsed .sb__sub .sb__link { justify-content:flex-start; padding:6px 16px; flex-direction:row; }
+.sb-collapsed .sb__sub .sb__link > .sb__text { font-size:16px; text-align:left; }
+.sb-collapsed .sb__nav > .sb__list > .sb__item > .sb__link:not([aria-expanded])::after {
+    content:attr(data-tip); position:absolute; left:calc(100% + 12px); top:50%; transform:translateY(-50%);
+    padding:6px 12px; border-radius:8px; background:var(--val-indigo-800); color:var(--val-indigo-50);
+    font-size:14px; line-height:20px; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .15s; }
+.sb-collapsed .sb__link:hover::after, .sb-collapsed .sb__link:focus-visible::after { opacity:1; }
+.dark .sb-collapsed .sb__nav > .sb__list > .sb__item > .sb__link:not([aria-expanded])::after { background:var(--val-offwhite); color:var(--val-black); }
+.sb__nav { overflow:visible; }
+
+
+/* ── Inhalt rückt neben die Leiste ── */
+.main { margin-left:var(--sb-current); transition:margin-left .25s ease; min-height:100vh; }
+
+/* ── Tablet / Smartphone (≤ 1024px): Leiste als einblendbares Menü ── */
+.sb-mobilebar { display:none; }
+@media (max-width:1024px) {
+  body, body.sb-collapsed { --sb-current:0px; }
+  .sb { width:var(--sb-w); transform:translateX(-105%); transition:transform .25s ease; }
+  body.sb-mobile-open .sb { transform:none; }
+  .sb__toggle { display:none; }
+  .sb-mobilebar { display:flex; align-items:center; justify-content:space-between; position:sticky; top:env(safe-area-inset-top, 0px); z-index:50;
+                  padding:12px var(--gutter); background:var(--val-white); box-shadow:0 0 30px 0 rgba(16,12,42,0.08); }
+  .dark .sb-mobilebar { background:linear-gradient(rgba(255,255,255,0.04), rgba(255,255,255,0.04)), var(--val-black); }
+  .sb-mobilebar button { border:0; background:none; cursor:pointer; color:var(--text); display:flex; padding:8px; }
+  .sb-mobilebar button i { font-size:24px; }
+  .sb-scrim { position:fixed; inset:0; z-index:55; background:rgba(16,12,42,0.4); display:none; }
+  body.sb-mobile-open .sb-scrim { display:block; }
+  /* auf dem Smartphone immer ausgeklappte Darstellung */
+  .sb-collapsed .sb__logo-full { display:block; } .sb-collapsed .sb__logo-mark { display:none; }
+  .sb-collapsed .sb__text, .sb-collapsed .sb__contact span { display:block; }
+  .sb-collapsed .sb__link[aria-controls] .sb__caret { position:static; margin:0; font-size:16px; }
+  .sb-collapsed .sb__title { visibility:visible; height:auto; line-height:32px; }
+  .sb-collapsed .sb__link { flex-direction:row; justify-content:flex-start; padding:8px 16px; gap:12px; }
+  .sb-collapsed .sb__head { flex-direction:row; }
+  .sb-collapsed .sb__sub { position:static; box-shadow:none; background:none; padding:2px 0 4px 32px; min-width:0; }
+  .sb-collapsed .sb__link::after { display:none; }
+}
+
+/* component: steps */
+/* valantic CI · components/steps — step lists in three forms:
+   .steps--check   guide checklist: expandable steps, "mark as done", auto-advance to the next open step
+   .steps-detail   documentation: steps + detail panel (vertical: beside · horizontal: below · mobile: inline)
+   .steps--process process: sequence with status (done / current / next), horizontal or vertical
+   Accent per route/theme via variables (works on html/body or any wrapper). Tokens only. */
+.steps, .steps-detail {
+  --st-acc:     var(--val-indigo);                 /* Route A · light */
+  --st-on-acc:  var(--val-offwhite);
+  --st-weight:  400;
+  --st-surface: rgba(16,12,42,0.05);
+  --st-open:    var(--val-white);
+  --st-shadow:  0 0 30px 0 rgba(16,12,42,0.08);
+  --st-line:    var(--val-silver);
+}
+.dark .steps, .dark .steps-detail { --st-acc:var(--val-gold); --st-on-acc:var(--val-black); --st-surface:rgba(255,255,255,0.06);
+                                    --st-open:rgba(255,255,255,0.10); --st-shadow:0 0 0 0 transparent; --st-line:rgba(255,255,255,0.24); }   /* Route A · dark */
+.route-bc .steps, .route-bc .steps-detail { --st-acc:var(--val-purple); --st-weight:600; }                                   /* Route B/C · light */
+.dark .route-bc .steps, .dark.route-bc .steps, .route-bc .dark .steps,
+.dark .route-bc .steps-detail, .dark.route-bc .steps-detail, .route-bc .dark .steps-detail { --st-acc:var(--val-lavender); }  /* Route B/C · dark */
+
+.steps { list-style:none; margin:0; padding:0; }
+
+/* ---------- Marker: number · current (ring) · done (filled + check) ---------- */
+.steps__marker {
+  flex:none; position:relative; z-index:1; display:flex; align-items:center; justify-content:center; box-sizing:border-box;
+  width:40px; height:40px; border-radius:50%; border:1.5px solid var(--st-acc); background:transparent;
+  font-size:17px; line-height:1; font-weight:var(--st-weight); color:var(--st-acc);
+}
+.steps__check { display:none; font-size:22px; }
+.is-current .steps__marker { box-shadow:0 0 0 5px color-mix(in srgb, var(--st-acc) 18%, transparent); }
+.is-done .steps__marker { background:var(--st-acc); color:var(--st-on-acc); }
+.is-done .steps__marker .steps__num { display:none; }
+.is-done .steps__marker .steps__check { display:block; }
+.is-next .steps__marker { border-color:var(--st-line); color:var(--text-sub); }
+
+.steps__text  { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.steps__title { font-size:17px; line-height:24px; font-weight:var(--st-weight); color:var(--text); }
+.steps__sub   { font-size:17px; line-height:24px; font-weight:400; color:var(--text-sub); }
+
+/* ---------- 1 · Guide checklist ---------- */
+.steps--check { display:flex; flex-direction:column; gap:12px; }
+.steps--check .steps__details { border-radius:15px; background:var(--st-surface); transition:background .2s, box-shadow .2s; }
+.steps--check .steps__details[open] { background:var(--st-open); box-shadow:inset 5px 0 0 var(--st-acc), var(--st-shadow); }
+.steps--check .steps__head {
+  display:grid; grid-template-columns:40px minmax(0,1fr) auto; align-items:center; gap:20px;
+  padding:16px 20px 16px 24px; cursor:pointer; list-style:none; border-radius:15px;
+}
+.steps--check .steps__head::-webkit-details-marker { display:none; }
+.steps--check .steps__head::marker { content:""; }
+.steps--check .steps__head:focus-visible { outline:2px solid var(--st-acc); outline-offset:3px; }
+.steps__caret { font-size:32px; line-height:1; color:var(--st-acc); transition:color .15s; }
+.steps--check .steps__head:hover .steps__caret { color:var(--val-coral); }
+.steps--check .is-done .steps__title { color:var(--text-sub); }
+.steps--check .steps__body { padding:0 24px 24px 84px; }
+.steps--check .steps__body > :first-child { margin-top:0; }
+.steps__actions { display:flex; flex-wrap:wrap; gap:var(--sp-2); margin-top:var(--sp-3); }
+
+/* ---------- 2 · Documentation: list + detail panel ---------- */
+.steps-detail { display:grid; grid-template-columns:minmax(0,5fr) minmax(0,7fr); gap:var(--grid-gap); align-items:start; }
+.steps-detail .steps { display:flex; flex-direction:column; gap:12px; }
+.steps-detail .steps__head {
+  display:grid; grid-template-columns:40px minmax(0,1fr) auto; align-items:center; gap:20px; width:100%; box-sizing:border-box;
+  padding:16px 20px 16px 24px; border:0; border-radius:15px; background:var(--st-surface); cursor:pointer; text-align:left;
+  font:inherit; color:inherit; transition:background .2s, box-shadow .2s;
+}
+.steps-detail .steps__head:hover { background:color-mix(in srgb, var(--st-acc) 8%, var(--st-surface)); }
+.steps-detail .steps__head[aria-selected="true"] { background:var(--st-open); box-shadow:inset 5px 0 0 var(--st-acc), var(--st-shadow); }
+.steps-detail .steps__head[aria-selected="true"] .steps__marker { background:var(--st-acc); color:var(--st-on-acc); }
+.steps-detail .steps__head:focus-visible { outline:2px solid var(--st-acc); outline-offset:3px; }
+.steps-detail .steps__icon { font-size:24px; color:var(--text-sub); }
+.steps-detail .steps__head[aria-selected="true"] .steps__icon { color:var(--val-coral); }
+.steps__panel {
+  position:sticky; top:calc(var(--sp-3) + env(safe-area-inset-top, 0px)); box-sizing:border-box;
+  padding:32px; border-radius:15px; background:var(--st-open); box-shadow:var(--st-shadow);
+}
+.steps__panel h3:first-child, .steps__content > :first-child { margin-top:0; }
+.steps__panel ul, .steps__panel ol { padding-left:24px; } .steps__panel li { margin-bottom:var(--sp-1); }
+.steps__content[hidden] { display:none; }
+.steps__panel a:not(.btn), .steps__body a:not(.btn) { color:var(--st-acc); text-underline-offset:3px; }   /* text links only — buttons keep their own colours */
+.steps__panel a:not(.btn):hover, .steps__body a:not(.btn):hover { color:var(--val-coral); }
+.steps__panel-head { display:flex; justify-content:space-between; gap:var(--sp-2); align-items:flex-start; }
+.steps__close { display:none; flex:none; padding:4px; border:0; background:none; color:var(--text); cursor:pointer; font-size:28px; line-height:1; }
+
+/* Horizontal: steps as a row on top, panel below */
+.steps-detail--horizontal { grid-template-columns:minmax(0,1fr); }
+.steps-detail--horizontal .steps { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); gap:0; }
+.steps-detail--horizontal .steps__item { position:relative; }
+.steps-detail--horizontal .steps__item:not(:last-child)::after {           /* connecting line */
+  content:""; position:absolute; top:39px; left:calc(16px + 40px + 8px); right:8px; height:1.5px; background:var(--st-line);
+}
+.steps-detail--horizontal .steps__head {
+  grid-template-columns:minmax(0,1fr); gap:12px; align-content:start; height:100%;
+  padding:19px 16px 20px; background:transparent; border-radius:15px;
+}
+.steps-detail--horizontal .steps__head:hover { background:var(--st-surface); }
+.steps-detail--horizontal .steps__head[aria-selected="true"] { box-shadow:inset 0 -5px 0 var(--st-acc), var(--st-shadow); }
+.steps-detail--horizontal .steps__icon { display:none; }
+
+/* ---------- 3 · Process: horizontal (default) or vertical timeline ---------- */
+.steps--process { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); gap:0; }
+.steps--process .steps__item { position:relative; display:flex; flex-direction:column; gap:12px; padding-right:var(--sp-3); }
+.steps--process .steps__item:not(:last-child)::after {
+  content:""; position:absolute; top:19.25px; left:48px; right:8px; height:1.5px; background:var(--st-line);
+}
+.steps--process .steps__item.is-done:not(:last-child)::after { background:var(--st-acc); }
+.steps--process .steps__status { white-space:nowrap; font-size:15px; line-height:15px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--st-acc); }
+.steps--process .is-next .steps__status { color:var(--text-sub); }
+.steps--vertical { grid-auto-flow:row; grid-auto-columns:auto; gap:0; }
+.steps--vertical .steps__item { display:grid; grid-template-columns:40px minmax(0,1fr); column-gap:24px; padding:0 0 32px; }
+.steps--vertical .steps__item > :not(.steps__marker) { grid-column:2; }
+.steps--vertical .steps__item > .steps__marker { grid-row:1 / span 3; }
+.steps--vertical .steps__item:not(:last-child)::after { top:48px; bottom:8px; left:19.25px; right:auto; width:1.5px; height:auto; }
+
+/* ---------- Responsive ---------- */
+@media (max-width:1024px) {
+  .steps-detail { grid-template-columns:minmax(0,1fr); }
+  .steps-detail .steps__panel { position:static; padding:24px; margin-top:-4px; }
+  .steps-detail .steps__close { display:inline-flex; }
+  .steps-detail .steps__panel-home:empty { display:none; }
+  .steps-detail--horizontal .steps { grid-auto-flow:row; gap:12px; }
+  .steps-detail--horizontal .steps__item::after { display:none; }
+  .steps-detail--horizontal .steps__head { grid-template-columns:40px minmax(0,1fr); padding:16px 20px; background:var(--st-surface); }
+  .steps-detail--horizontal .steps__head[aria-selected="true"] { box-shadow:inset 5px 0 0 var(--st-acc), var(--st-shadow); background:var(--st-open); }
+  .steps--process:not(.steps--vertical) { grid-auto-flow:row; }
+  .steps--process:not(.steps--vertical) .steps__item { display:grid; grid-template-columns:40px minmax(0,1fr); column-gap:24px; padding:0 0 32px; }
+  .steps--process:not(.steps--vertical) .steps__item > :not(.steps__marker) { grid-column:2; }
+  .steps--process:not(.steps--vertical) .steps__item > .steps__marker { grid-row:1 / span 3; }
+  .steps--process:not(.steps--vertical) .steps__item:not(:last-child)::after { top:48px; bottom:8px; left:19.25px; right:auto; width:1.5px; height:auto; }
+}
+@media (max-width:640px) {
+  .steps--check .steps__head, .steps-detail .steps__head { gap:16px; padding:14px 16px; }
+  .steps--check .steps__body { padding:0 16px 20px 16px; }
+}
+@media print {
+  .steps__details { box-shadow:none !important; }
+  .steps__details:not([open]) > .steps__body { display:block; }
+  .steps__actions { display:none; }
+}
+
+/* component: table */
+/* valantic CI · components/table — data table on a card.
+   Card: radius 12, shadow 24, padding 32 · header 15px uppercase (exception like .label) + 1.2px dark line, 20px below
+   · rows 17.6/25.6, padding 16 top / 20 bottom, 1.2px silver lines, none after the last row.
+   Lines are inset shadows so they stay exactly 1.2px (Chrome rounds borders). Accent per route/theme via variables. Tokens only. */
+.table-card {
+  --tb-bg:     var(--val-white);
+  --tb-shadow: 0 0 24px 0 rgba(16,12,42,0.08);
+  --tb-head:   var(--text-sub);                       /* Route A · light: indigo (dark: gold, below) */
+  --tb-line:   var(--val-silver);
+  --tb-hover:  rgba(16,12,42,0.03);
+  --tb-weight: 600;
+  --tb-headline: var(--text);                         /* line under the header · dark: route color */
+  box-sizing:border-box; width:100%; padding:32px; border-radius:12px; background:var(--tb-bg); box-shadow:var(--tb-shadow); color:var(--text);
+}
+.dark .table-card     { --tb-head:var(--val-gold); --tb-headline:var(--tb-head); --tb-bg:rgba(255,255,255,0.06); --tb-shadow:0 0 0 0 transparent; --tb-line:rgba(255,255,255,0.16); --tb-hover:rgba(255,255,255,0.04); }
+.route-bc .table-card { --tb-head:var(--val-purple); }
+.dark .route-bc .table-card, .dark.route-bc .table-card, .route-bc .dark .table-card { --tb-head:var(--val-lavender); --tb-headline:var(--val-lavender); }
+
+/* Option without card: no surface, shadow, radius or padding — lines, type and colors stay.
+   Use it only when no descriptive text stands directly before the table (heading only). */
+.table-card--plain { padding:0; background:none; box-shadow:none; border-radius:0; }
+:is(h2, h3, h4, p, ul, ol) + .table-card { margin-top:var(--sp-3); }   /* 24px below a heading or paragraph */
+
+/* wide tables scroll inside the card, never the page */
+.table-scroll { position:relative; overflow-x:auto; -webkit-overflow-scrolling:touch; contain:inline-size; }   /* never widens its container (also inside grids) */
+.table { width:100%; border-collapse:collapse; border-spacing:0; font-size:17.6px; line-height:25.6px; }
+.table caption { caption-side:top; text-align:left; padding:0 0 var(--sp-2); font-size:17px; color:var(--text-sub); }
+
+.table th {
+  padding:0 24px 20px 0; text-align:left; vertical-align:bottom; white-space:nowrap;
+  font-size:15px; line-height:15px; font-weight:var(--tb-weight); letter-spacing:1.5px; text-transform:uppercase; color:var(--tb-head);
+  box-shadow:inset 0 -1.2px 0 var(--tb-headline);     /* 1.2px line under the header: text color (light) / route color (dark) */
+}
+.table td {
+  padding:16px 24px 20px 0; text-align:left; vertical-align:top; font-weight:400; color:var(--text);
+  box-shadow:inset 0 -1.2px 0 var(--tb-line);         /* 1.2px silver row line */
+}
+.table th:last-child, .table td:last-child { padding-right:0; }
+.table tbody tr:last-child td { box-shadow:none; padding-bottom:0; }
+.table tbody th { font-size:17.6px; line-height:25.6px; letter-spacing:0; text-transform:none; color:var(--text);   /* row headers */
+                  padding:16px 24px 20px 0; vertical-align:top; white-space:normal; box-shadow:inset 0 -1.2px 0 var(--tb-line); }
+.table tbody tr:last-child th { box-shadow:none; padding-bottom:0; }
+
+/* alignment helpers */
+.table .is-right, .table .is-num { text-align:right; }
+.table .is-num { font-variant-numeric:tabular-nums; white-space:nowrap; }
+.table .is-nowrap { white-space:nowrap; }
+.table .badge { line-height:18px; vertical-align:top; margin-top:-0.2px; }   /* same 26px as every badge, centred on the 25.6px text line */
+.table a:not(.btn) { color:var(--tb-head); text-underline-offset:3px; } .table a:not(.btn):hover { color:var(--val-coral); }   /* text links only — buttons keep their own colours */
+
+/* optional: highlight row on hover (for long tables) */
+.table--hover tbody tr:hover td, .table--hover tbody tr:hover th { background:var(--tb-hover); }
+
+@media (max-width:640px) {
+  .table-card:not(.table-card--plain) { padding:24px; }
+  .table { font-size:17px; line-height:24px; }
+  .table-scroll .table { min-width:560px; }           /* keeps columns readable; the card scrolls sideways */
+}
+@media print { .table-card { box-shadow:none; border:1px solid var(--val-silver); } .table-scroll { overflow:visible; } }
+
+/* =====================================================================
+   Editable cells — controls only appear when they are needed (hover, focus, edit mode)
+   ===================================================================== */
+.table-card { --tb-acc:var(--val-indigo); --tb-empty:var(--val-silver); }                                     /* accent for focus, rating, carets */
+.dark .table-card { --tb-acc:var(--val-gold); --tb-empty:rgba(255,255,255,0.36); }   /* empty rating points: visible on dark */
+.route-bc .table-card { --tb-acc:var(--val-purple); }
+.dark .route-bc .table-card, .dark.route-bc .table-card, .route-bc .dark .table-card { --tb-acc:var(--val-lavender); }
+
+/* Edit toggle (optional): <div class="table-toolbar"> with a switch[data-table-edit] — without edit mode cells are read-only */
+.table-toolbar { display:flex; justify-content:space-between; align-items:center; gap:var(--sp-2); flex-wrap:wrap; margin-bottom:var(--sp-3); }
+.table-toolbar__hint { margin:0; color:var(--text-sub); }
+
+/* 1 · Free text: <input class="table-field"> or <textarea class="table-field"> — looks like plain text until hovered/focused */
+.table-field {
+  display:block; width:100%; min-width:8ch; box-sizing:border-box; margin:0; padding:0 0 2px; border:0; border-radius:0; resize:none; overflow:hidden;
+  background:transparent; color:var(--text); font:inherit; font-size:inherit; line-height:inherit; box-shadow:inset 0 -1.2px 0 transparent;
+  transition:box-shadow .15s;
+}
+input.table-field { field-sizing:content; }                 /* short values: field as wide as its text */
+textarea.table-field { min-width:18ch; }                     /* long text: wraps between words like cell text (fits long German compounds); height grows via script */
+.table-field::placeholder { color:var(--text-sub); opacity:.7; }
+.table-field:hover { box-shadow:inset 0 -1.2px 0 var(--tb-line); }
+.table-field:focus { outline:none; box-shadow:inset 0 -1.5px 0 var(--tb-acc); }
+.table-field[readonly] { cursor:default; box-shadow:none !important; }
+.table-field[readonly]::placeholder { opacity:0; }
+
+/* 2 · Selection: dropdown component with .dropdown--inline (see components/dropdown) */
+
+/* 3 · Status: <button class="table-status" data-options="Geplant:neutral|Aktuell:outline|Abgeschlossen:gradient"> */
+.table-status { display:inline-flex; align-items:center; gap:6px; padding:0; border:0; background:none; cursor:pointer; font:inherit; color:var(--text); vertical-align:top; }
+.table-status .badge { pointer-events:none; }
+.table-status__caret { font-size:18px; color:var(--tb-acc); opacity:0; transition:opacity .15s; }
+.table-status:hover .table-status__caret, .table-status:focus-visible .table-status__caret, .table-status[aria-expanded="true"] .table-status__caret { opacity:1; }
+.table-status:focus-visible { outline:2px solid var(--tb-acc); outline-offset:3px; border-radius:99px; }
+.table-status[aria-disabled="true"] { cursor:default; } .table-status[aria-disabled="true"] .table-status__caret { display:none; }
+.table-menu {                                                                     /* popover list (fixed, so it is not clipped by the scroll area) */
+  position:fixed; z-index:80; display:grid; gap:2px; min-width:180px; margin:0; padding:5px; list-style:none; border-radius:15px;
+  background:var(--val-white); box-shadow:0 0 30px 0 rgba(16,12,42,0.12);
+}
+.dark .table-menu { background:linear-gradient(rgba(255,255,255,0.06), rgba(255,255,255,0.06)), var(--val-black); box-shadow:0 0 30px 0 rgba(0,0,0,0.4); }
+.table-menu[hidden] { display:none; }
+.table-menu__item { display:flex; align-items:center; justify-content:space-between; gap:var(--sp-2); padding:8px 10px; border-radius:10px; cursor:pointer; }
+.table-menu__item:hover, .table-menu__item.is-focused { background:rgba(16,12,42,0.05); }
+.dark .table-menu__item:hover, .dark .table-menu__item.is-focused { background:rgba(255,255,255,0.08); }
+.table-menu__item .ph { font-size:18px; visibility:hidden; color:var(--tb-acc, var(--val-indigo)); }
+.table-menu__item[aria-selected="true"] .ph { visibility:visible; }
+
+/* 4 · Rating 1–7: <div class="table-rating" data-max="5" data-value="3" data-look="dots|bar|number"> */
+.table-rating { display:inline-flex; align-items:center; gap:6px; vertical-align:top; min-height:25.6px; }
+.table-rating__pt {
+  flex:none; box-sizing:border-box; width:14px; height:14px; padding:0; border-radius:50%; cursor:pointer;
+  border:1.5px solid var(--tb-empty); background:transparent; transition:background .12s, border-color .12s, transform .12s;
+}
+.table-rating__pt.is-on { background:var(--tb-acc); border-color:var(--tb-acc); }
+.table-rating.is-preview .table-rating__pt.is-on { opacity:.55; }
+.table-rating[data-look="bar"] { gap:3px; }
+.table-rating[data-look="bar"] .table-rating__pt { width:20px; height:8px; border-radius:4px; border:0; background:var(--tb-empty); }
+.table-rating[data-look="bar"] .table-rating__pt.is-on { background:var(--val-gradient); }
+.table-rating__num { margin-left:6px; font-variant-numeric:tabular-nums; color:var(--text-sub); white-space:nowrap; }
+.table-rating[data-look="number"] .table-rating__pt { display:none; }
+.table-rating[data-look="number"] .table-rating__num { margin-left:0; color:var(--text); }
+.table-rating:not([data-readonly]) .table-rating__pt:hover { transform:scale(1.15); }
+.table-rating:focus-visible { outline:2px solid var(--tb-acc); outline-offset:4px; border-radius:6px; }
+.table-rating[data-readonly] .table-rating__pt { cursor:default; }
+
+/* Read-only state (edit mode off): no hover affordances */
+.table--locked .table-field { pointer-events:none; }
+.table--locked .table-status { cursor:default; } .table--locked .table-status__caret { display:none; }
+.table--locked .table-rating__pt { cursor:default; transform:none !important; }
+.table--locked .dropdown--inline .dropdown__button { pointer-events:none; } .table--locked .dropdown--inline .dropdown__icon { display:none; }
+
+  </style>
+</head>
+<body class="route-bc">
+<style>
+.main section{scroll-margin-top:24px}
+.lead{max-width:720px;color:var(--text-sub)}
+.stack>*+*{margin-top:var(--sp-3)}
+.prompt{background:var(--card-bg);border:1px solid var(--border);border-left:5px solid var(--val-coral);border-radius:12px;padding:var(--sp-2) var(--sp-3);position:relative}
+.prompt__label{display:block;font-size:17px;letter-spacing:.08em;text-transform:uppercase;color:var(--val-coral);font-weight:600;margin-bottom:var(--sp-1)}
+.prompt__text{margin:0;white-space:pre-wrap;padding-right:48px}
+.copybtn{position:absolute;top:12px;right:12px;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:8px;width:40px;height:40px;cursor:pointer;font-size:20px}
+.copybtn:hover{border-color:var(--val-coral);color:var(--val-coral)}
+.codeblock{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:var(--sp-2) var(--sp-3);overflow-x:auto;font:17px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--text);margin:0;position:relative}
+.codeblock code{font:inherit}
+.expect,.tip{display:flex;gap:var(--sp-1);align-items:flex-start;margin:0;padding:var(--sp-2);border-radius:12px;background:var(--card-bg);border:1px solid var(--border)}
+.expect i,.tip i{font-size:24px;color:var(--val-lavender);flex:none;margin-top:2px}
+.tip i{color:var(--val-gold)}
+.kbd{font:17px ui-monospace,Menlo,Consolas,monospace;padding:0 6px;border:1px solid var(--border);border-radius:6px;background:var(--card-bg)}
+.timebar{display:flex;gap:var(--sp-1);flex-wrap:wrap;margin:var(--sp-3) 0 0}
+.hero-h1{font-size:72px;line-height:1.0;margin:var(--sp-2) 0;letter-spacing:-.02em}
+@media(max-width:1024px){.hero-h1{font-size:48px}}
+.mini{color:var(--text-sub)}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3)}
+@media(max-width:1024px){.cols2{grid-template-columns:1fr}}
+.card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:var(--sp-3)}
+.card h3{margin-top:0}
+.figure{margin:var(--sp-2) 0 0}
+.figure figcaption{margin-top:var(--sp-1)}
+</style><aside class="sb" id="sidebar" aria-label="Lab navigation">
+<div class="sb__head"><a class="sb__logo" href="#top" aria-label="valantic"><svg class="logo sb__logo-full" xmlns="http://www.w3.org/2000/svg" viewBox="232 216 1500 325" style="height:24px;width:auto;">
+  <path fill="#FFFFFF" d="M1678,456.2c-7.8,14.8-24.3,23.9-43.6,23.9c-30,0-51.8-22.4-51.8-53.2s21.8-53.2,51.8-53.2c19.2,0,35.3,8.9,43.6,23.9l54-31.4c-19.3-33.1-56.2-53.6-96.8-53.6c-65.4,0-114.7,49.1-114.7,114.2S1569.8,541,1635.2,541c40.6,0,77.5-20.6,96.8-54L1678,456.2z"/>
+  <rect fill="#FFFFFF" x="1439" y="318.8" width="62" height="216.2"/>
+  <path fill="#FFFFFF" d="M1470,216.1c-20.4,0-37.6,17.2-37.6,37.6s17.2,37.6,37.6,37.6s37.6-17.2,37.6-37.6S1490.4,216.1,1470,216.1z"/>
+  <path fill="#FFFFFF" d="M1331.8,519.9c16.2,14.6,44.1,19.5,87.8,15.2v-55.9c-19.9,1.1-32.8,0.3-39.9-6.3c-3.7-3.5-5.5-8.3-5.5-14.8v-80h45.4v-59.4h-45.4v-75.9l-62,18.6v57.3H1277V378h35.2v80C1312.2,488.2,1318.4,507.8,1331.8,519.9z"/>
+  <path fill="#FFFFFF" d="M1163.4,374.6c23,0,41.7,18.7,41.7,41.7v118.6h62V402.1c0-49.4-40-89.5-89.4-89.5c-18.9,0-37.4,6-52.7,17.2l-3.3,2.4v-13.4h-62V535h62V416.3C1121.8,393.3,1140.4,374.6,1163.4,374.6z"/>
+  <path fill="#FFFFFF" d="M1029.2,534.9V318.8h-62v24.1l-3.6-4.1c-15-17.4-36.6-26.2-64.1-26.2c-27.5,0-53.4,11.7-72.8,32.9c-19.7,21.5-30.5,50.4-30.5,81.4s10.8,59.9,30.5,81.4c19.4,21.2,45.2,32.9,72.8,32.9c27.6,0,49-8.8,64.1-26.2l3.6-4.1V535L1029.2,534.9z M912.8,482.6c-32.6,0-54.5-22.4-54.5-55.8s21.9-55.8,54.5-55.8c32.6,0,54.5,22.4,54.5,55.8S945.3,482.6,912.8,482.6z"/>
+  <polygon fill="#FFFFFF" points="714.8,234.7 714.8,534.9 776.8,534.9 776.8,216.1"/>
+  <path fill="#FFFFFF" d="M684.3,534.9V318.8h-62v24.1l-3.6-4.1c-15.1-17.4-36.6-26.2-64.1-26.2c-27.5,0-53.4,11.7-72.8,32.9c-19.6,21.5-30.5,50.4-30.5,81.4s10.8,59.9,30.5,81.4c19.4,21.2,45.2,32.9,72.8,32.9c27.5,0,49-8.8,64.1-26.2l3.6-4.1V535L684.3,534.9z M567.8,482.6c-32.6,0-54.5-22.4-54.5-55.8s21.9-55.8,54.5-55.8c32.6,0,54.5,22.4,54.5,55.8S600.4,482.6,567.8,482.6z"/>
+  <polygon fill="#FFFFFF" points="395.3,318.8 348,463 300.7,318.8 232,318.8 312,534.9 384,534.9 464,318.8"/>
+</svg><svg class="logo sb__logo-mark" xmlns="http://www.w3.org/2000/svg" viewBox="232 318 232 217" style="height:28px;width:auto;" aria-hidden="true"><polygon fill="#FFFFFF" points="395.3,318.8 348,463 300.7,318.8 232,318.8 312,534.9 384,534.9 464,318.8"/></svg></a><button type="button" class="sb__toggle" id="sbToggle" aria-label="Collapse navigation" aria-expanded="true" aria-controls="sidebar"><i class="ph ph-sidebar-simple"></i></button></div>
+<p class="sb__title">GitHub Copilot Lab</p>
+<nav class="sb__nav"><ul class="sb__list">
+<li class="sb__item"><a class="sb__link is-active" href="#overview" data-tip="Overview"><i class="ph ph-house"></i><span class="sb__text">Overview</span></a></li>
+<li class="sb__item"><a class="sb__link" href="#prep" data-tip="Before you start"><i class="ph ph-list-checks"></i><span class="sb__text">Before you start</span></a></li>
+<li class="sb__item"><a class="sb__link" href="#part1" data-tip="Part 1: Ticket to PR"><i class="ph ph-git-pull-request"></i><span class="sb__text">Part 1: Ticket to PR</span></a></li>
+<li class="sb__item"><a class="sb__link" href="#part2" data-tip="Part 2: Instructions and skill"><i class="ph ph-puzzle-piece"></i><span class="sb__text">Part 2: Instructions and skill</span></a></li>
+<li class="sb__item"><a class="sb__link" href="#wrapup" data-tip="Wrap-up"><i class="ph ph-flag"></i><span class="sb__text">Wrap-up</span></a></li>
+<li class="sb__item"><a class="sb__link" href="#homework-tdd" data-tip="Follow-up A: TDD skill"><i class="ph ph-flask"></i><span class="sb__text">Follow-up A: TDD skill</span></a></li>
+<li class="sb__item"><a class="sb__link" href="#homework-mcp" data-tip="Follow-up B: MCP"><i class="ph ph-plugs-connected"></i><span class="sb__text">Follow-up B: MCP</span></a></li>
+<li class="sb__item"><a class="sb__link" href="#help" data-tip="Troubleshooting"><i class="ph ph-lifebuoy"></i><span class="sb__text">Troubleshooting</span></a></li>
+</ul></nav>
+<div class="sb__foot"><a class="sb__link" href="#appendix" data-tip="Appendix: tickets and pages"><i class="ph ph-file-text"></i><span class="sb__text">Appendix</span></a></div>
+</aside><div class="sb-scrim" id="sbScrim"></div>
+<div class="main" id="top"><div class="sb-mobilebar"><button type="button" id="sbOpen" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><i class="ph ph-list"></i></button><svg xmlns="http://www.w3.org/2000/svg" viewBox="232 216 1500 325" style="height:24px;width:auto;">
+  <path fill="#FFFFFF" d="M1678,456.2c-7.8,14.8-24.3,23.9-43.6,23.9c-30,0-51.8-22.4-51.8-53.2s21.8-53.2,51.8-53.2c19.2,0,35.3,8.9,43.6,23.9l54-31.4c-19.3-33.1-56.2-53.6-96.8-53.6c-65.4,0-114.7,49.1-114.7,114.2S1569.8,541,1635.2,541c40.6,0,77.5-20.6,96.8-54L1678,456.2z"/>
+  <rect fill="#FFFFFF" x="1439" y="318.8" width="62" height="216.2"/>
+  <path fill="#FFFFFF" d="M1470,216.1c-20.4,0-37.6,17.2-37.6,37.6s17.2,37.6,37.6,37.6s37.6-17.2,37.6-37.6S1490.4,216.1,1470,216.1z"/>
+  <path fill="#FFFFFF" d="M1331.8,519.9c16.2,14.6,44.1,19.5,87.8,15.2v-55.9c-19.9,1.1-32.8,0.3-39.9-6.3c-3.7-3.5-5.5-8.3-5.5-14.8v-80h45.4v-59.4h-45.4v-75.9l-62,18.6v57.3H1277V378h35.2v80C1312.2,488.2,1318.4,507.8,1331.8,519.9z"/>
+  <path fill="#FFFFFF" d="M1163.4,374.6c23,0,41.7,18.7,41.7,41.7v118.6h62V402.1c0-49.4-40-89.5-89.4-89.5c-18.9,0-37.4,6-52.7,17.2l-3.3,2.4v-13.4h-62V535h62V416.3C1121.8,393.3,1140.4,374.6,1163.4,374.6z"/>
+  <path fill="#FFFFFF" d="M1029.2,534.9V318.8h-62v24.1l-3.6-4.1c-15-17.4-36.6-26.2-64.1-26.2c-27.5,0-53.4,11.7-72.8,32.9c-19.7,21.5-30.5,50.4-30.5,81.4s10.8,59.9,30.5,81.4c19.4,21.2,45.2,32.9,72.8,32.9c27.6,0,49-8.8,64.1-26.2l3.6-4.1V535L1029.2,534.9z M912.8,482.6c-32.6,0-54.5-22.4-54.5-55.8s21.9-55.8,54.5-55.8c32.6,0,54.5,22.4,54.5,55.8S945.3,482.6,912.8,482.6z"/>
+  <polygon fill="#FFFFFF" points="714.8,234.7 714.8,534.9 776.8,534.9 776.8,216.1"/>
+  <path fill="#FFFFFF" d="M684.3,534.9V318.8h-62v24.1l-3.6-4.1c-15.1-17.4-36.6-26.2-64.1-26.2c-27.5,0-53.4,11.7-72.8,32.9c-19.6,21.5-30.5,50.4-30.5,81.4s10.8,59.9,30.5,81.4c19.4,21.2,45.2,32.9,72.8,32.9c27.5,0,49-8.8,64.1-26.2l3.6-4.1V535L684.3,534.9z M567.8,482.6c-32.6,0-54.5-22.4-54.5-55.8s21.9-55.8,54.5-55.8c32.6,0,54.5,22.4,54.5,55.8S600.4,482.6,567.8,482.6z"/>
+  <polygon fill="#FFFFFF" points="395.3,318.8 348,463 300.7,318.8 232,318.8 312,534.9 384,534.9 464,318.8"/>
+</svg><span style="width:40px"></span></div><section id="overview"><div class="container"><div class="grid"><div class="span-8">
+<span class="label">GitHub Copilot Lab</span>
+<h1 class="hero-h1">From ticket to pull request</h1>
+<p class="lead">Two hours, one repo, one ticket. You work with GitHub Copilot Chat in VS Code from a Jira-style ticket to a reviewed pull request in a small sales data warehouse (Oracle source, SQL layers, Python orchestration, Power BI), then tune the setup so the next ticket goes faster.</p>
+</div></div></div></section>
+<section><div class="container"><div class="grid"><div class="span-12">
+<span class="label">Plan</span><h2>Where the two hours go</h2>
+<div class="table-card"><div class="table-scroll" aria-label="Time plan"><table class="table">
+<thead><tr><th scope="col">Time</th><th scope="col">Block</th><th scope="col" class="is-num">Min</th><th scope="col">You leave with</th></tr></thead>
+<tbody>
+<tr><td class="is-nowrap">13:00</td><th scope="row">Part 1: Ticket to PR</th><td class="is-num">65</td><td>Baseline and app tour (15 min), ticket explored and grilled, status report built, tested, reviewed, PR opened</td></tr>
+<tr><td class="is-nowrap">14:05</td><th scope="row">Part 2: Instructions and skill</th><td class="is-num">30</td><td>Better instructions and your first skill: ticket to mini-spec</td></tr>
+<tr><td class="is-nowrap">14:35</td><th scope="row">Wrap-up</th><td class="is-num">15</td><td>Your working patterns for backend work</td></tr>
+<tr><td class="is-nowrap">14:50</td><th scope="row">Open discussion and buffer</th><td class="is-num">10</td><td>Questions, catching up, what you take back to your team</td></tr>
+</tbody></table></div></div>
+<p class="mini">Follow-ups after the workshop, choose one or both: Follow-up A, test-driven development with a skill (about 45 minutes), and Follow-up B, connecting an MCP server (about 60 minutes). Fast finishers: extra tasks at the end of Part 1.</p>
+</div></div></div></section>
+<section><div class="container"><div class="grid"><div class="span-12"><span class="label">The repo</span><h2>az-copilot-backend-lab-2026-10 in one picture</h2>
+<p class="lead">A synthetic sales warehouse. Oracle is simulated with SQLite files, the SQL is written Oracle-style. Nothing needs a server or a network.</p>
+<pre class="codeblock"><code>src (simulated Oracle: products, customers, orders)
+  -> stg   raw copy + load timestamp
+  -> core  cleaned, conformed (credit-blocked customers and discontinued products stop here)
+  -> mart  dim_product, dim_customer, fact_orders
+  -> powerbi/model.md  (documented, not real) + scripts/render_report.py (HTML preview, simulation)
+
+Python orchestrates: pipeline.py, runner.py, one log row per step in ctl.dwh_control.
+Look at any table: uv run dwh peek mart.fact_orders
+Tickets: DWH-101 status report (Part 1) | DWH-102 credit check (Part 2) | DWH-103 data quality check (Follow-up A)</code></pre>
+</div></div></div></section>
+<section><div class="container"><div class="grid"><div class="span-12"><span class="label">Method</span><h2>The loop you walk</h2>
+<ol class="steps steps--process" aria-label="Agentic loop"><li class="steps__item"><span class="steps__marker">1</span><span class="steps__title">Prepare</span><span class="steps__sub">Ticket, branch, app tour</span></li><li class="steps__item"><span class="steps__marker">2</span><span class="steps__title">Explore</span><span class="steps__sub">Context before code</span></li><li class="steps__item"><span class="steps__marker">3</span><span class="steps__title">Plan</span><span class="steps__sub">Grill, then argue</span></li><li class="steps__item"><span class="steps__marker">4</span><span class="steps__title">Implement</span><span class="steps__sub">Agent edits</span></li><li class="steps__item"><span class="steps__marker">5</span><span class="steps__title">Verify</span><span class="steps__sub">Check and tests</span></li><li class="steps__item"><span class="steps__marker">6</span><span class="steps__title">Review and PR</span><span class="steps__sub">You own the diff</span></li></ol>
+</div></div></div></section><section id="prep"><div class="container"><div class="grid"><div class="span-12"><span class="label">Setup</span><h2>Before you start</h2><p class="lead">Check this before 13:00, so the first ten minutes go into the lab and not into setup. If something is missing, ask a facilitator.</p></div><div class="span-12 stack"><ul class="checklist" data-checklist-key="prep"><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">VS Code with the GitHub Copilot Chat extension, signed in with your Copilot seat</span></label></li><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">GitHub Pull Requests extension installed (publisher GitHub)</span></label></li><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">Your fork of az-copilot-backend-lab-2026-10 cloned and opened as the VS Code workspace</span></label></li><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">uv installed: <code>uv --version</code> works in the VS Code terminal (uv fetches Python 3.13 itself)</span></label></li><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">Chat session target set to Local (picker in the chat input)</span></label></li><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">A paid Copilot seat for model choice and whole-change code review</span></label></li></ul><p>Where the controls are, as a schematic of the chat input:</p><figure class="figure"><svg viewBox="0 0 720 250" role="img" aria-label="Schematic of the chat input: input box with agent and model pickers, below it the session target, permissions and the context window ring" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:720px;height:auto"><rect x="10" y="10" width="700" height="150" rx="14" fill="var(--card-bg)" stroke="var(--border)" stroke-width="2"/><text x="30" y="52" font-size="17" fill="var(--text-sub)">Describe what to build</text><text x="30" y="132" font-size="17" fill="var(--text)">+</text><text x="70" y="132" font-size="17" fill="var(--text)">Agent</text><text x="160" y="132" font-size="17" fill="var(--text)">Model picker</text><text x="300" y="132" font-size="17" fill="var(--text-sub)">(model settings)</text><text x="640" y="132" font-size="17" fill="var(--text)">Send</text><text x="30" y="205" font-size="17" fill="var(--text)">Local</text><text x="130" y="205" font-size="17" fill="var(--text)">Default permissions</text><circle cx="680" cy="198" r="16" fill="none" stroke="var(--val-coral)" stroke-width="4"/><path d="M680 182 A16 16 0 0 1 696 198" fill="none" stroke="var(--val-coral)" stroke-width="4"/><text x="660" y="240" font-size="17" fill="var(--val-coral)" text-anchor="end">Context window control: hover here</text><text x="30" y="240" font-size="17" fill="var(--text-sub)">Session target and permissions</text></svg><figcaption class="mini">Schematic, not a screenshot. Your VS Code version may order the controls slightly differently.</figcaption></figure><div class="accordion"><details class="accordion__item" name="prep"><summary class="accordion__head">No uv on your machine? Use the dev container<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p>The repo contains a dev container. Install Docker and the VS Code extension <strong>Dev Containers</strong>, open the repo folder and run <strong>Dev Containers: Reopen in Container</strong> from the Command Palette. It builds an image with Python 3.13, uv and the Copilot extensions and seeds the demo data, so every command in this lab works unchanged in its terminal. Sign in to Copilot inside the container and check the session target as in the checklist. The first build needs network access and a few minutes, so do it before 13:00.</p></div></details><details class="accordion__item" name="prep"><summary class="accordion__head">For facilitators: what the fork must contain<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><ul><li>The repo is the az-copilot-backend-lab-2026-10 package: <code>tickets/</code> (DWH-101 to DWH-103), <code>docs/confluence/</code>, <code>powerbi/model.md</code>, <code>.agents/skills/</code>.</li><li>Participants without uv use the dev container (Docker and the Dev Containers extension required). Build it once beforehand on a clean machine and test Copilot Chat inside it. The dev container is untested here.</li><li><code>uv sync</code> works on the workshop network. Run it once beforehand on a fresh clone, uv downloads Python 3.13 and the dependencies.</li><li><code>uv run scripts/lab_check.py</code> is red and <code>uv run pytest</code> is green on a fresh fork.</li><li><code>AGENTS.md</code> is deliberately thin. If the fork carries an agent-specific instruction file, move its content here.</li><li>VS Code setting <code>chat.useAgentsMdFile</code> is on for the Local agent.</li><li>Reference solutions are in <code>solutions/</code> (DWH-101, DWH-103). <code>AGENTS.md</code> tells the agent not to use them. If you want to be sure, delete the folder in the participant fork.</li></ul></div></details></div></div></div></div></section><div class="divider"></div><section id="part1"><div class="container"><div class="grid"><div class="span-12"><span class="label">Part 1 | 65 minutes (13:00 to 14:05)</span><h2>Ticket to pull request</h2><p class="lead">Walk the whole loop once, the way you would on a real backend ticket. The prompts are one way to say it, reword them. Talk to your neighbor whenever you want to compare.</p></div><div class="span-12 stack"><ol class="steps steps--check" data-steps-key="part1"><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">1</span><span class="steps__text"><span class="steps__title">See the “before”, then branch off</span><span class="steps__sub">8 min | baseline</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Open your fork in VS Code. In the integrated terminal create the simulated source data and a demo run history, then look at what the BI team sees every morning today:</p><pre class="codeblock"><code>uv run dwh seed
+uv run dwh status</code></pre><p>A raw dump of the log table, nine lines. Somewhere in there a step failed. Now run the finish-line check, then read the ticket <code>tickets/DWH-101.md</code> yourself and create your branch:</p><pre class="codeblock"><code>uv run scripts/lab_check.py
+git switch -c feature/DWH-101-status-report</code></pre><p class="expect"><i class="ph ph-eye" aria-hidden="true"></i><span><strong>You should see:</strong> Red. Four <code>[FAIL]</code> lines, one per acceptance criterion the status output misses. You run the same check at the end.</span></p><p class="tip"><i class="ph ph-lightbulb" aria-hidden="true"></i><span><strong>Tip:</strong> In the next steps you attach the ticket to your messages with <span class="kbd">#</span> and the file name. The pipeline is simulated: Oracle is a set of SQLite files, nothing needs a server.</span></p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">2</span><span class="steps__text"><span class="steps__title">Look at the app</span><span class="steps__sub">7 min | what you are working on</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Before you change anything, see what the pipeline produces. Run it once for real, look at a few rows and open the simulated Power BI report:</p><pre class="codeblock"><code>uv run dwh run
+uv run dwh peek src.orders
+uv run dwh peek mart.fact_orders
+uv run scripts/render_report.py</code></pre><p>Open <code>exports/report.html</code> in your browser (Explorer: right-click the file, <strong>Reveal in Finder</strong> or <strong>Reveal in File Explorer</strong>). In the dev container the repo folder is shared with your machine, so the file is on your disk as well. Then skim <code>powerbi/model.md</code>: that is how the report would read the mart tables.</p><p class="expect"><i class="ph ph-eye" aria-hidden="true"></i><span><strong>You should see:</strong> Raw orders in <code>src</code>, cleaned facts in <code>mart</code> (fewer rows: unshipped orders, credit-blocked customers and discontinued products are filtered out), and a report with orders, revenue and revenue per week. The report is a simulation: no Power BI, no DAX engine.</span></p><p class="tip"><i class="ph ph-lightbulb" aria-hidden="true"></i><span><strong>Tip:</strong> <code>uv run dwh status</code> now shows your live run. The demo run with the failure is still what the check and the ticket use.</span></p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">3</span><span class="steps__text"><span class="steps__title">Explore: follow the data</span><span class="steps__sub">5 min | Ask mode</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Do not guess where the status text comes from. Ask with the whole codebase as context, still in Ask mode:</p><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">#codebase How does `uv run dwh status` get its data, from the log table through the Python code to the console output? Point me at the exact functions and files, and tell me which Confluence page in docs/ defines what "late" means.</p></div><p class="expect"><i class="ph ph-eye" aria-hidden="true"></i><span><strong>You should see:</strong> <code>main</code> in <code>cli.py</code>, <code>render_status</code> and <code>latest_run_rows</code> in <code>status.py</code>, the table <code>ctl.dwh_control</code> in <code>seed.py</code>, and <code>docs/confluence/pipeline-operations.md</code>. Open the References under the answer and check the files are real.</span></p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">4</span><span class="steps__text"><span class="steps__title">Grill the ticket</span><span class="steps__sub">8 min | before anything is planned</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Tickets are rarely finished, even with acceptance criteria. The skill <strong>grill-me</strong> interviews you in rounds, recommends an answer for each question, and looks up facts in the repo itself. It only runs when you call it. Type <span class="kbd">/</span> to check it is listed (<span class="kbd">/skills</span> shows all), then start in <strong>Ask</strong> mode:</p><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">/grill-me Grill me on #file:tickets/DWH-101.md before we plan anything.</p></div><p>Answer the first round. Accept the recommendation where it is sensible and challenge at least one. Continue until nothing is left open, then capture the result:</p><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">Append a section "Decisions" to tickets/DWH-101.md with every decision we made, one line each.</p></div><p class="expect"><i class="ph ph-eye" aria-hidden="true"></i><span><strong>You should see:</strong> The lateness rules answered from <code>docs/confluence/pipeline-operations.md</code> instead of asked (a step at exactly 06:00:00, a step at 06:00:30, skipped steps), plus real decisions: does a late step count as OK in "n of total" (the example says 7 of 9), how are steps sorted inside a group, what does the report say when no run exists. If the agent asks you something the page answers, point it there.</span></p><p class="tip"><i class="ph ph-lightbulb" aria-hidden="true"></i><span><strong>Tip:</strong> Compare with your neighbor: which decisions did you make differently? Skip the skill for a one-line fix, use it whenever a ticket hides decisions.</span></p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">5</span><span class="steps__text"><span class="steps__title">Plan: decide first, then push back</span><span class="steps__sub">12 min | Plan agent</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Switch the agent picker from Ask to <strong>Plan</strong> (or start with <span class="kbd">/plan</span>). The plan agent proposes and asks questions, it does not edit files.</p><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">Plan the work for #file:tickets/DWH-101.md including its Decisions section. The change belongs in src/dwhpulse/status.py only, no new columns, no SQL change. Cover every acceptance criterion. Do not write code.</p></div><p>Answer its questions, then push on the technical risks before you approve:</p><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">Before I approve: what could go wrong technically? How do you compute the minutes after 06:00, where does the 06:00 come from, and what do you show for a step that finishes at exactly 06:00:00 and one at 06:00:30? How is the output kept stable? Which tests prove the failed, the skipped and the late case?</p></div><p>Use <strong>Open in Editor</strong> to read the plan as a document. When it survives your questions, approve with <strong>Start Implementation</strong>.</p><p class="expect"><i class="ph ph-eye" aria-hidden="true"></i><span><strong>You should see:</strong> A revised plan with the deadline from <code>config.py</code> instead of a magic number, sorted output, a skipped line that names the upstream step, and a test per criterion.</span></p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">6</span><span class="steps__text"><span class="steps__title">Implement: let the agent edit</span><span class="steps__sub">7 min | Agent mode</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Start Implementation switches to the Agent. It edits files and may ask to run terminal commands: read each command before you click <strong>Allow</strong>. Then look at what it changed in the Source Control view, file by file.</p><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">List every file you changed and explain each change in one line. Did you touch anything outside the plan?</p></div><p class="tip"><i class="ph ph-lightbulb" aria-hidden="true"></i><span><strong>Tip:</strong> Accountability is the point. The agent wrote it, you ship it. Edits you do not like: <strong>Undo</strong> in the chat or <strong>Restore Checkpoint</strong>. Checkpoints do not replace git.</span></p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">7</span><span class="steps__text"><span class="steps__title">Verify: check, tests and your own eyes</span><span class="steps__sub">10 min | proof, not trust</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Run the check from step 1, now expecting green. If it is still red, hand the output back with <span class="kbd">#terminalSelection</span>:</p><pre class="codeblock"><code>uv run scripts/lab_check.py</code></pre><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">#terminalSelection The lab check is still failing with this output. Fix it and tell me which acceptance criterion it relates to.</p></div><p>Then lock the criteria in with tests. The repo already has <code>tests/test_status.py</code>:</p><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">Look at tests/test_status.py and tests/conftest.py. Add tests for the acceptance criteria of #file:tickets/DWH-101.md: summary line, failed first, skipped names its upstream step, late with minutes, stable output. Run uv run pytest and show me the result.</p></div><p>Finally simulate a fresh failure and read the report as the BI team lead would (a live run uses a simulated scheduler clock starting at 05:00, so nothing is late):</p><pre class="codeblock"><code>uv run dwh run --inject-failure core_orders
+uv run dwh status</code></pre><p class="expect"><i class="ph ph-eye" aria-hidden="true"></i><span><strong>You should see:</strong> <code>[DONE] DWH-101 complete!</code>, new tests that would fail for the raw dump, and a report where the failed step comes first and the skipped step names its cause.</span></p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">8</span><span class="steps__text"><span class="steps__title">Review, commit and pull request</span><span class="steps__sub">8 min | done means reviewable</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Review first: in Source Control hover over <strong>Changes</strong> and click <strong>Copilot Code Review</strong> (Free plan: select the code, right-click, Generate Code, Review). Fallback prompt for Agent mode:</p><div class="prompt"><span class="prompt__label">Fallback prompt</span><p class="prompt__text">Review my uncommitted changes as a strict senior data engineer. Focus on correctness, edge cases (no run in the log, a run without failures), naming, the conventions in docs/confluence/pipeline-operations.md and anything the ticket did not ask for. Be concise and rank findings by severity.</p></div><div class="accordion"><details class="accordion__item" name="reviewref"><summary class="accordion__head">What a good review finds here (look after you tried)<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><ul><li><strong>Deadline boundaries:</strong> 06:00:00 must be on time, 06:00:30 must be 1 min late. Rounding down or using “at or after” breaks one of them.</li><li><strong>Magic number:</strong> 06:00 written into <code>status.py</code> instead of read from <code>config.DAILY_DEADLINE</code>.</li><li><strong>Empty and clean cases:</strong> no run in the log, and a run without failures, both still give a sensible first line.</li><li><strong>Skipped is not late:</strong> a skipped step that finished after 06:00 must not appear as LATE.</li><li><strong>Scope:</strong> changes outside <code>status.py</code> and its tests that the ticket did not ask for.</li></ul></div></details></div><p>Decide per finding: fix, or argue why not. Then commit with the ticket key (the sparkle icon drafts a message) and open the pull request from the GitHub Pull Requests view, target your own fork, draft is fine:</p><pre class="codeblock"><code>DWH-101 Make the pipeline status readable for the BI team</code></pre><p class="expect"><i class="ph ph-eye" aria-hidden="true"></i><span><strong>You should see:</strong> A PR in your fork with DWH-101 in the title, the check result in the description, and a diff limited to the agreed files. Paste the link in the facilitator channel.</span></p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li></ol><p class="tip"><i class="ph ph-lightbulb" aria-hidden="true"></i><span><strong>Note:</strong> You tested after implementing here. Follow-up A turns this around with the test-driven-development skill: tests first, then code. Try both and compare which result you trust more.</span></p><div class="accordion"><details class="accordion__item"><summary class="accordion__head">Finished early? Pick one<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><ul><li><strong>Model comparison:</strong> on a scratch branch, run the plan prompt of step 5 once with a lightweight model and once with a top-tier model (new chat each, model picker in the chat input, hover a response to see who answered). Which plan raised the edge cases on its own? Was it worth the extra credits?</li><li><strong>Context meter:</strong> the context window control is the small ring at the bottom right of the chat input, in the row with <em>Local</em> and <em>Default permissions</em>. Hover over it for the token count, a breakdown by category and the AI credits of the session. Send one <code>#codebase</code> question, hover again, then run <span class="kbd">/compact</span> (or select the control and choose Compact Conversation). <span class="kbd">/context</span> is not a meter: it just makes the agent describe the workspace. If you cannot find the ring, skip it, <span class="kbd">/compact</span> works without it. A chat that only explores is a throwaway chat.</li><li><strong>Debugging skill:</strong> when the check stays red and the agent starts guessing, call <span class="kbd">/systematic-debugging</span>.</li><li><strong>Own ticket:</strong> write a ticket with acceptance criteria for a duration column in the status report and run the loop without the guide. Mind the convention: a mart change also updates <code>powerbi/model.md</code>.</li></ul><figure class="figure"><svg viewBox="0 0 720 250" role="img" aria-label="Schematic of the chat input: input box with agent and model pickers, below it the session target, permissions and the context window ring" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:720px;height:auto"><rect x="10" y="10" width="700" height="150" rx="14" fill="var(--card-bg)" stroke="var(--border)" stroke-width="2"/><text x="30" y="52" font-size="17" fill="var(--text-sub)">Describe what to build</text><text x="30" y="132" font-size="17" fill="var(--text)">+</text><text x="70" y="132" font-size="17" fill="var(--text)">Agent</text><text x="160" y="132" font-size="17" fill="var(--text)">Model picker</text><text x="300" y="132" font-size="17" fill="var(--text-sub)">(model settings)</text><text x="640" y="132" font-size="17" fill="var(--text)">Send</text><text x="30" y="205" font-size="17" fill="var(--text)">Local</text><text x="130" y="205" font-size="17" fill="var(--text)">Default permissions</text><circle cx="680" cy="198" r="16" fill="none" stroke="var(--val-coral)" stroke-width="4"/><path d="M680 182 A16 16 0 0 1 696 198" fill="none" stroke="var(--val-coral)" stroke-width="4"/><text x="660" y="240" font-size="17" fill="var(--val-coral)" text-anchor="end">Context window control: hover here</text><text x="30" y="240" font-size="17" fill="var(--text-sub)">Session target and permissions</text></svg><figcaption class="mini">Schematic, not a screenshot. Your VS Code version may order the controls slightly differently.</figcaption></figure></div></details></div></div></div></div></section><div class="divider"></div><section id="part2"><div class="container"><div class="grid"><div class="span-12"><span class="label">Part 2 | 30 minutes (14:05 to 14:35)</span><h2>Instructions and your first skill</h2><p class="lead">Move what you just learned out of your head and into the repo, so every next session starts smarter.</p></div><div class="span-12 stack"><ol class="steps steps--check" data-steps-key="part2"><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">1</span><span class="steps__text"><span class="steps__title">Let Copilot draft instructions, then edit them</span><span class="steps__sub">8 min</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p><code>AGENTS.md</code> is deliberately thin. A good one makes every future prompt sharper. In a new Local Agent chat run <code>/init</code>, then merge the draft with the existing file. What belongs in: how to run and test, the architecture in one paragraph, the conventions you noticed in Part 1, no-go areas. Long documentation does not, link to it.</p><pre class="codeblock"><code>/init</code></pre><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">Based on what you learned working on DWH-101, improve AGENTS.md. Describe the layers (SRC, STG, CORE, MART, CTL), how to run the pipeline, the tests and the check, and the conventions from docs/confluence/pipeline-operations.md and tests/test_sql_conventions.py (no SELECT *, every SQL file registered in pipeline.py, SRC read only, a mart change updates powerbi/model.md). Keep it under 40 lines.</p></div><p class="expect"><i class="ph ph-eye" aria-hidden="true"></i><span><strong>You should see:</strong> Short and specific. Prove it is used: in a new chat ask how to run the pipeline with a simulated Oracle error and look for AGENTS.md in the References.</span></p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">2</span><span class="steps__text"><span class="steps__title">Write your first skill: ticket-to-spec</span><span class="steps__sub">14 min</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>A skill is a folder with a <code>SKILL.md</code> that teaches the agent a procedure, loaded only when its description matches the task. Read <code>tickets/DWH-102.md</code> and skim the two pages it links (<code>docs/confluence/</code>): the ticket is vague on purpose. Then type <span class="kbd">/create-skill</span> and describe what you want, or create <code>.agents/skills/ticket-to-spec/SKILL.md</code> by hand.</p><p>Requirements: <code>name</code> equals the folder name, lowercase with hyphens. The <code>description</code> is the trigger: say when to use it, not only what it does. Numbered steps, at least one gotcha, and it must never write code. <code>.agents/skills/grill-me/SKILL.md</code> is a model. If <span class="kbd">/create-skill</span> puts the folder somewhere else, move it to <code>.agents/skills/</code>.</p><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">/create-skill A skill called ticket-to-spec. Given a Jira ticket file and the convention pages it references under docs/confluence, produce a mini-spec in specs/&lt;ticket-key&gt;.md with goal, assumptions, open questions, testable acceptance criteria, test cases and out of scope. It must flag conflicts between ticket and conventions and must never write code.</p></div><div class="accordion"><details class="accordion__item" name="ref"><summary class="accordion__head">Reference solution (look after you tried)<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><pre class="codeblock"><code>---
+name: ticket-to-spec
+description: Turns a Jira ticket plus linked Confluence conventions into a mini-spec with assumptions, open questions, acceptance criteria and test cases. Use when the user shares a ticket, or asks to refine, spec or plan a story before implementation.
+---
+
+1. Read the ticket and every document it references (docs/confluence/).
+2. List conflicts and gaps between the ticket and the conventions.
+3. Write specs/&lt;ticket-key&gt;.md with: Goal, Assumptions, Open questions,
+   Acceptance criteria (each testable), Test cases (incl. edge cases), Out of scope.
+4. Never write code. Ask the user to answer the open questions first.
+
+## Gotchas
+- Do not invent requirements. Mark every guess as an assumption.
+- Keep the spec to one page.</code></pre></div></details></div><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">3</span><span class="steps__text"><span class="steps__title">Run it on DWH-102</span><span class="steps__sub">8 min</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Start a new chat, invoke the skill from the slash menu and attach the ticket:</p><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">/ticket-to-spec #file:tickets/DWH-102.md</p></div><p class="expect"><i class="ph ph-eye" aria-hidden="true"></i><span><strong>You should see:</strong> <code>specs/DWH-102.md</code> with open questions and at least one gap between ticket and pages: what counts towards the exposure (shipped orders only), which anchor for the rolling 30 days, whether customers with an approved exception are listed, which mart table and Power BI measure carry the result, and that the credit limit is not in the fact table yet. If the skill did not fire, sharpen its description (<span class="kbd">/skills</span> shows what is registered).</span></p><p>Answer two open questions in the chat and let the agent update the spec. You have the input for a clean implementation run without a line of code written. You do not implement DWH-102 today: the spec is the result of this part, so use the remaining minutes for the comparison, not for code. Compare your spec with your neighbor’s: whose description made the skill fire?</p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li></ol></div></div></div></section><div class="divider"></div><section id="wrapup"><div class="container"><div class="grid"><div class="span-12"><span class="label">Wrap-up | 15 minutes (14:35 to 14:50)</span><h2>Your working patterns</h2><p class="lead">What would you do the same way on your team’s backend code tomorrow? Start from the examples, delete what does not fit, add your own, and decide where each pattern lives.</p></div><div class="span-12 stack"><div class="table-card" data-table-key="patterns2"><div class="table-scroll" aria-label="Working patterns"><table class="table"><thead><tr><th scope="col">Working pattern</th><th scope="col">Where it lives</th></tr></thead><tbody><tr><td><textarea class="table-field" rows="2">Let the agent restate the ticket and flag gaps before any plan</textarea></td><td><textarea class="table-field" rows="2">Skill: ticket-to-spec</textarea></td></tr><tr><td><textarea class="table-field" rows="2">Plan first, then argue with it: "what could go wrong?" for empty tables, reruns and credit-blocked customers</textarea></td><td><textarea class="table-field" rows="2">Habit</textarea></td></tr><tr><td><textarea class="table-field" rows="2">Explore in a throwaway chat, implement in a fresh one</textarea></td><td><textarea class="table-field" rows="2">Habit</textarea></td></tr><tr><td><textarea class="table-field" rows="2">Run and test commands, layer map (SRC, STG, CORE, MART) and no-go areas, written once</textarea></td><td><textarea class="table-field" rows="2">Instructions</textarea></td></tr><tr><td><textarea class="table-field" rows="2">No SELECT *, every new SQL file registered in pipeline.py, a mart change updates powerbi/model.md</textarea></td><td><textarea class="table-field" rows="2">Instructions</textarea></td></tr><tr><td><textarea class="table-field" rows="2">Every acceptance criterion gets a test, edge cases first</textarea></td><td><textarea class="table-field" rows="2">Instructions</textarea></td></tr><tr><td><textarea class="table-field" rows="2">Read the diff and ask for one line of reason per changed file before committing</textarea></td><td><textarea class="table-field" rows="2">Habit</textarea></td></tr><tr><td><textarea class="table-field" rows="2">PR description names the ticket, the criteria and how each was verified</textarea></td><td><textarea class="table-field" rows="2">Skill idea: pr-description</textarea></td></tr><tr><td><textarea class="table-field" rows="1" placeholder="Your pattern"></textarea></td><td><textarea class="table-field" rows="1" placeholder="Instructions, skill or habit?"></textarea></td></tr><tr><td><textarea class="table-field" rows="1" placeholder="Your pattern"></textarea></td><td><textarea class="table-field" rows="1" placeholder="Instructions, skill or habit?"></textarea></td></tr><tr><td><textarea class="table-field" rows="1" placeholder="Your pattern"></textarea></td><td><textarea class="table-field" rows="1" placeholder="Instructions, skill or habit?"></textarea></td></tr></tbody></table></div></div><div class="accordion"><details class="accordion__item" name="wrapq"><summary class="accordion__head">How to decide where a pattern lives<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><ul><li><strong>Instructions:</strong> it is always true for this repo and short enough to be read on every request.</li><li><strong>Skill:</strong> it is a procedure for some tasks, with steps, and it should load only when the task matches.</li><li><strong>Habit:</strong> it is a way you work that no file can enforce. Write it down for the team anyway.</li></ul></div></details><details class="accordion__item" name="wrapq"><summary class="accordion__head">Questions for the discussion<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><ul><li>Which step cost the most time?</li><li>Where did the agent surprise you?</li><li>What would you never delegate?</li><li>Test after (Part 1) or test first (Follow-up A): which would you choose for your team’s tickets, and why?</li><li>Which real tickets of your team fit this loop, and which do not?</li></ul></div></details></div></div></div></div></section><div class="divider"></div><section id="homework-tdd"><div class="container"><div class="grid"><div class="span-12"><span class="label">Follow-up A | about 45 minutes</span><h2>Test-driven development with a skill</h2><p class="lead">Part 1 gave you a loop with a check script. Here the tests are the loop: the skill forces red before green.</p></div><div class="span-12 stack"><ol class="steps steps--check" data-steps-key="hwtdd"><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">1</span><span class="steps__text"><span class="steps__title">Read the skill</span><span class="steps__sub">8 min</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Open <code>.agents/skills/test-driven-development/SKILL.md</code> and <code>writing-good-tests.md</code> in your fork. The skill has one iron rule: no production code without a failing test first. Note down: the red, green, refactor cycle in your own words, and two excuses for skipping the test that the skill rejects.</p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">2</span><span class="steps__text"><span class="steps__title">Read the ticket and branch off</span><span class="steps__sub">3 min</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Read <code>tickets/DWH-103.md</code>. The seed data contains three deliberately bad order rows: a duplicate, an amount of 0 and an unknown customer. Run the pipeline once so the stg tables exist, then create a branch:</p><pre class="codeblock"><code>uv run dwh seed
+uv run dwh run
+git switch -c feature/DWH-103-order-quality</code></pre><p>The check reads <code>stg.orders</code> and <code>stg.customers</code>, so it is easy to test with a few hand-made rows. The repo has pytest, check with <code>uv run pytest</code>. Look at <code>tests/conftest.py</code>: the <code>conn</code> fixture gives you a clean database.</p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">3</span><span class="steps__text"><span class="steps__title">Red: tests first</span><span class="steps__sub">10 min</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Start a new chat in Agent mode and call the skill explicitly:</p><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">/test-driven-development Implement #file:tickets/DWH-103.md. Start with the tests for every acceptance criterion, using small hand-made rows in the conn fixture, and run them. Show me the failing output before you write any production code.</p></div><p class="expect"><i class="ph ph-eye" aria-hidden="true"></i><span><strong>You should see:</strong> Tests that fail for the right reason (the module <code>quality.py</code> does not exist yet), with the terminal output as proof. If the agent edits production code first: stop it, point to the iron rule and restart. That is the lesson, not a mistake of yours.</span></p><pre class="codeblock"><code>git add -A
+git commit -m "DWH-103 tests: order data quality check (red)"</code></pre><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">4</span><span class="steps__text"><span class="steps__title">Green: the smallest change</span><span class="steps__sub">10 min</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Now ask for the minimum:</p><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">Write the smallest production change that makes these tests pass. Do not add anything the tests do not require. Run the tests and show the output.</p></div><p class="expect"><i class="ph ph-eye" aria-hidden="true"></i><span><strong>You should see:</strong> All tests green, a short diff, no extras such as fixing the data or a new pipeline step (out of scope in the ticket). Read the diff against the ticket: is anything in it that no test demands?</span></p><pre class="codeblock"><code>git add -A
+git commit -m "DWH-103 check orders for duplicates, bad amounts and unknown customers (green)"</code></pre><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">5</span><span class="steps__text"><span class="steps__title">Refactor and verify on real data</span><span class="steps__sub">7 min</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Ask for one improvement without changing behavior, run everything, and then point the check at the seeded data:</p><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">Refactor for readability without changing behavior. Then run uv run pytest and show me the output. Finally call check_orders on the real seeded database and show me what it finds.</p></div><p class="expect"><i class="ph ph-eye" aria-hidden="true"></i><span><strong>You should see:</strong> The three bad rows from the seed: <code>duplicate_order</code> with 2 orders, <code>non_positive_amount</code> with 1, <code>unknown_customer</code> with 1.</span></p><p>Then open a pull request for DWH-103 as in Part 1. The two commits (red, then green) are your proof of the method.</p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">6</span><span class="steps__text"><span class="steps__title">Reflect</span><span class="steps__sub">5 min</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><ul class="checklist" data-checklist-key="tddreflect"><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">Every test failed before the production code existed</span></label></li><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">No test asserts only what the code happens to do today</span></label></li><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">The diff contains nothing that no test or ticket criterion asks for</span></label></li><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">I can say what the skill changed compared with Part 1, in two sentences</span></label></li></ul><p>Write the two sentences into the PR description. Compare notes at the next session: where did the agent resist the rule, and what did you do?</p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li></ol></div></div></div></section><div class="divider"></div><section id="homework-mcp"><div class="container"><div class="grid"><div class="span-12"><span class="label">Follow-up B | about 60 minutes</span><h2>MCP: give the agent a new power</h2><p class="lead">Do it on your own after the workshop. Connect one MCP server to az-copilot-backend-lab-2026-10, use it, and judge it like a dependency you would ship.</p></div><div class="span-12 stack"><ol class="steps steps--check" data-steps-key="homework"><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">1</span><span class="steps__text"><span class="steps__title">Read how MCP servers are configured</span><span class="steps__sub">10 min</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>MCP (Model Context Protocol) lets the agent call external tools: browsers, issue trackers, databases. In VS Code a server is a JSON entry under the key <code>servers</code> in <code>.vscode/mcp.json</code> (workspace) or a user configuration. Read the page <a href="https://code.visualstudio.com/docs/agent-customization/mcp-servers">MCP servers in VS Code</a> and note: where does the config live, what happens on first start (trust dialog), and where do you switch single tools on and off?</p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">2</span><span class="steps__text"><span class="steps__title">Wire one server</span><span class="steps__sub">15 min</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Pick one option and add it with <span class="kbd">MCP: Add Server</span> in the Command Palette, or write the JSON yourself. Check it with <span class="kbd">MCP: List Servers</span>. Use the Local session type.</p><div class="accordion"><details class="accordion__item" name="mcpopt" open><summary class="accordion__head">Option A: GitHub, the agent works your backlog<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p>Remote server, needs sign-in. VS Code asks you to trust it and to authenticate.</p><pre class="codeblock"><code>{
+  "servers": {
+    "github": { "type": "http", "url": "https://api.githubcopilot.com/mcp" }
+  }
+}</code></pre></div></details><details class="accordion__item" name="mcpopt"><summary class="accordion__head">Option B: Playwright, the agent drives a browser<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p>Server command: <code>npx -y @playwright/mcp@latest</code> (verify the package name in the current Playwright MCP docs). Needs Node.js 18 or newer. The first run downloads a browser. az-copilot-backend-lab-2026-10 has no web app, so you use it on documentation pages.</p><pre class="codeblock"><code>{
+  "servers": {
+    "playwright": { "command": "npx", "args": ["-y", "@playwright/mcp@latest"] }
+  }
+}</code></pre></div></details><details class="accordion__item" name="mcpopt"><summary class="accordion__head">Option C: Jira and Confluence (only if your team allows the Atlassian Rovo MCP server)<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p>Ask your admin first. If available, this is the real version of the lab: ticket and policy page come from Jira and Confluence instead of files, and the <code>ticket-to-spec</code> skill from Part 2 works unchanged.</p></div></details></div><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">3</span><span class="steps__text"><span class="steps__title">Use it on az-copilot-backend-lab-2026-10</span><span class="steps__sub">20 min</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Give the agent a real job with the server, then read what it did.</p><div class="accordion"><details class="accordion__item" name="mcpuse" open><summary class="accordion__head">GitHub<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">List the open issues in my fork. Draft three issues for follow-up work on az-copilot-backend-lab-2026-10 (a duration column in the status report, a test for ties in the sort order, an export of the credit check). Do not create anything yet, show me the drafts.</p></div></div></details><details class="accordion__item" name="mcpuse"><summary class="accordion__head">Playwright<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">Open the Microsoft Learn article about star schema design in Power BI with the browser tool. Compare its recommendations with powerbi/model.md and list what our model does differently. Change nothing, report which steps you took.</p></div></div></details><details class="accordion__item" name="mcpuse"><summary class="accordion__head">Atlassian<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">Read DWH-102 from Jira and the page Sales credit policy from Confluence. Then use the ticket-to-spec skill to write the mini-spec.</p></div></div></details></div><p class="tip"><i class="ph ph-lightbulb" aria-hidden="true"></i><span><strong>Tip:</strong> Watch the tool calls in the chat. Every call is a step the agent took on your behalf. Would you have approved each one?</span></p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">4</span><span class="steps__text"><span class="steps__title">Check security and cost</span><span class="steps__sub">10 min</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>An MCP server can read and act. Answer these for your server and write the answers down:</p><ul class="checklist" data-checklist-key="hwsec"><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">Who runs it: a local process you control, or a vendor-hosted service?</span></label></li><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">Which credentials does it use? Could they be read-only or scoped to one repo?</span></label></li><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">Which tools does it expose? Disable every tool you do not need (Configure Tools in the chat input)</span></label></li><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">What is the worst thing it could do on your behalf, and is a human in the loop for that?</span></label></li><li><label class="checklist__item"><input class="checklist__input" type="checkbox"><span class="checklist__box"><i class="ph ph-check" aria-hidden="true"></i></span><span class="checklist__text">Does your organization restrict MCP servers by policy?</span></label></li></ul><p>Then measure the context cost: hover the context window control in the chat input (see the context meter tip in Part 1) with the server disabled, then enabled, and note the difference in tokens. Tool definitions are loaded into every request.</p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li><li class="steps__item"><details class="steps__details"><summary class="steps__head"><span class="steps__marker">5</span><span class="steps__text"><span class="steps__title">Write it up</span><span class="steps__sub">5 min</span></span><i class="ph ph-caret-circle-down steps__caret" aria-hidden="true"></i></summary><div class="steps__body"><p>Create <code>docs/mcp-follow-up.md</code> in your fork with five short sections: which server, what you used it for, what surprised you, the risks you found, and your verdict: would your team use it on real backend work, and under which rules?</p><div class="prompt"><span class="prompt__label">Prompt</span><p class="prompt__text">Draft docs/mcp-follow-up.md from this conversation: which MCP server I wired, what I used it for, what went wrong, the risks, and a verdict for a backend team. Keep it under one page and mark anything you are guessing.</p></div><p class="tip"><i class="ph ph-lightbulb" aria-hidden="true"></i><span><strong>Deliverable:</strong> Bring the write-up to the next session. The verdicts feed the governance discussion.</span></p><div class="steps__actions"><button type="button" class="btn btn-outline steps__done">Mark as done</button></div></div></details></li></ol></div></div></div></section><div class="divider"></div><section id="help"><div class="container"><div class="grid"><div class="span-12"><span class="label">Help</span><h2>Troubleshooting</h2><p class="lead">First thing to try, always: paste the error into the chat and say what you expected.</p></div><div class="span-12 stack"><div class="accordion"><details class="accordion__item" name="faq"><summary class="accordion__head"><code>uv run</code> fails or wants to download Python<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p>uv fetches Python 3.13 and pydantic on first use and needs network access to do so. Run <code>uv sync</code> once on a network that allows it, or ask a facilitator for a prepared fork.</p></div></details><details class="accordion__item" name="faq"><summary class="accordion__head">“unable to open database file” or empty tables<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p>Run <code>uv run dwh seed</code> once. The data folder <code>data/</code> is created on demand and is git-ignored.</p></div></details><details class="accordion__item" name="faq"><summary class="accordion__head">The check stays red<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p>Run <code>uv run scripts/lab_check.py</code> and read which acceptance criterion fails. The check uses its own demo history, so a live <code>uv run dwh run</code> does not influence it.</p></div></details><details class="accordion__item" name="faq"><summary class="accordion__head">The status shows a different run than expected<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p>The report shows the latest run by run id. After <code>uv run dwh run</code> that is your live run, not the demo history from 2026-10-06. To see the demo run again, delete the folder <code>data/</code> and run <code>uv run dwh seed</code>.</p></div></details><details class="accordion__item" name="faq"><summary class="accordion__head">I want to see the data<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p><code>uv run dwh peek schema.table</code> shows the first rows of any table, for example <code>src.orders</code>, <code>core.orders</code> or <code>ctl.dwh_control</code>. Add <code>--rows 20</code> for more.</p></div></details><details class="accordion__item" name="faq"><summary class="accordion__head">The pipeline reports ORA errors that are not mine<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p>Only <code>--inject-failure STEP</code> raises a simulated <code>ORA-00942</code>. Without that flag, a real failure means a bug in a SQL file: paste the error and the SQL file into the chat.</p></div></details><details class="accordion__item" name="faq"><summary class="accordion__head">I cannot find Plan mode or the model picker<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p>Both live in the chat input: the agent picker (Ask, Agent, Plan) and the model picker. Make sure the session target is Local.</p></div></details><details class="accordion__item" name="faq"><summary class="accordion__head">My instructions or skill are not picked up<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p>Check the References under the answer. For instructions, the setting <code>chat.useAgentsMdFile</code> must be on for the Local agent. For skills, the folder name must equal <code>name</code> in the frontmatter, and <span class="kbd">/skills</span> shows what is registered. For details run <strong>Developer: Open Agent Debug Logs</strong> from the Command Palette.</p></div></details><details class="accordion__item" name="faq"><summary class="accordion__head">“Reopen in Container” fails or hangs<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p>Docker must be running and have network access for the first build. Check the Dev Containers output (Command Palette: Dev Containers: Show Container Log). Without Docker use uv locally.</p></div></details><details class="accordion__item" name="faq"><summary class="accordion__head">The agent wants to run a terminal command<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p>That is the default permission level. Read the command, then click Allow. Never allow commands you do not understand.</p></div></details><details class="accordion__item" name="faq"><summary class="accordion__head">Copilot Code Review button is missing<i class="ph ph-caret-circle-down accordion__control" aria-hidden="true"></i></summary><div class="accordion__body"><p>Whole-change review needs a paid plan. Use the selection review (right-click, Generate Code, Review) or the fallback prompt in the review step.</p></div></details></div></div></div></div></section><div class="divider"></div><section id="appendix"><div class="container"><div class="grid"><div class="span-12"><span class="label">Appendix</span><h2>Tickets and pages for the lab</h2><p class="lead">All files below are part of the repo, the blocks are for reference and for copying single files into your own project. In a real project tickets and pages come from Jira and Confluence.</p></div><div class="span-12 stack"><h3>Repository layout for the lab</h3><pre class="codeblock"><code>az-copilot-backend-lab-2026-10/
+  README.md
+  AGENTS.md                    thin, grows in Part 2
+  .devcontainer/               dev container for participants without uv
+  .agents/
+    README.md                  where each skill comes from, licenses
+    skills/
+      grill-me/SKILL.md                         Part 1
+      test-driven-development/SKILL.md          Follow-up A
+      systematic-debugging/SKILL.md             optional
+      verification-before-completion/SKILL.md   optional
+      ticket-to-spec/SKILL.md                   you write it in Part 2
+  tickets/        DWH-101.md  DWH-102.md  DWH-103.md
+  docs/confluence/  pipeline-operations.md  sales-credit-policy.md
+  solutions/      reference solutions, look only after you tried
+  sql/            stg/  core/  mart/
+  src/dwhpulse/   pipeline, runner, status, seed, cli
+  powerbi/model.md
+  scripts/        lab_check.py  export_powerbi.py  render_report.py
+  tests/</code></pre><h3>tickets/DWH-101.md</h3><pre class="codeblock"><code>DWH-101 | Make the pipeline status readable for the whole team
+Type: Story | Priority: Medium | Component: Monitoring
+Reporter: BI Team Lead | Status: Ready for Dev
+
+Description
+As a member of the BI team I want to see the status of the last pipeline run without asking
+a data engineer, so that I know every morning whether the reports can be trusted.
+Today `uv run dwh status` prints a raw dump of the log table.
+
+Acceptance criteria
+1. The first line reads: "Pipeline run &lt;date&gt;: &lt;n&gt; of &lt;total&gt; steps OK, &lt;f&gt; failed, &lt;s&gt; skipped, &lt;l&gt; late"
+   (example: "Pipeline run 2026-10-06: 7 of 9 steps OK, 1 failed, 1 skipped, 1 late").
+2. Failed steps are listed first, with step name, layer and Oracle error.
+3. A skipped step names the failed step it depends on and is not shown as FAILED.
+4. A late step is flagged "LATE" with the minutes after 06:00, as defined in docs/confluence/pipeline-operations.md.
+5. The output is stable: the same log gives the same text.
+6. scripts/lab_check.py passes.
+
+Out of scope
+Sending the status by mail, a web page, new columns in ctl.dwh_control.</code></pre><h3>tickets/DWH-102.md</h3><pre class="codeblock"><code>DWH-102 | Check customers for credit limit breaches
+Type: Story | Priority: Medium | Component: Sales Reporting
+Reporter: Head of Credit Management | Status: Needs refinement
+
+Description
+Sales orders should be checked against the credit limits of our customers across all product lines,
+so Credit Management can see problem customers before the Monday review. Result should show up
+in the Power BI report.
+
+Links
+Sales credit policy (Confluence page, see docs/confluence/sales-credit-policy.md)
+Pipeline operations (Confluence page, see docs/confluence/pipeline-operations.md)</code></pre><h3>tickets/DWH-103.md</h3><pre class="codeblock"><code>DWH-103 | Check order data for typical errors before the load
+Type: Story | Priority: Medium | Component: Data Quality
+Reporter: BI Team Lead | Status: Ready for Dev
+
+Description
+Bad rows in the source reach the reports unnoticed: the same order twice, orders without an amount,
+orders of customers we do not know. I want a check that finds them in stg.orders, so the team can
+see them before the Monday review.
+
+Acceptance criteria
+1. check_orders(conn) in src/dwhpulse/quality.py returns a list of issues. Each issue is a frozen pydantic model with: rule, count, order_ids (at most the first 5, ascending).
+2. Rule "duplicate_order": the same PRODUCT_ID, CUSTOMER_ID and ORDERED_AT appear more than once. All rows of such a group count.
+3. Rule "non_positive_amount": AMOUNT_EUR is 0 or negative.
+4. Rule "unknown_customer": CUSTOMER_ID does not exist in stg.customers.
+5. A rule without findings is not part of the result. Clean data gives an empty list.
+6. The check only reads, it never changes a table.
+7. Unit tests cover every rule, the clean case and the "at most 5 ids" limit.
+
+Out of scope
+Fixing the data, mails, a pipeline step, new tables.</code></pre><h3>docs/confluence/sales-credit-policy.md</h3><pre class="codeblock"><code># Sales credit policy (simulated Confluence page)
+
+## Why
+Sales must not ship to customers who exceed their credit exposure, whatever product line or
+channel the orders come through.
+
+## Rules
+- The shipped order value of a customer in any rolling 30 days must not exceed the customer's
+  credit limit (CREDIT_LIMIT_EUR), summed across all product lines and sales channels.
+- Customers with a credit block never appear in reporting.
+- A sales manager can request an exception for one customer, approved by Credit Management.
+- Orders of discontinued products are not part of the check.
+
+## Reporting
+- The Power BI report "Sales Credit Monitor" shows the check per week.
+- Credit Management reviews the report every Monday.
+- Customers above the limit are listed with their orders, never with more than the customer id and segment.</code></pre><h3>docs/confluence/pipeline-operations.md</h3><pre class="codeblock"><code># Pipeline operations (simulated Confluence page)
+
+## Layers
+- SRC: simulated source system. Read only.
+- STG: raw copy plus load timestamp. No business logic.
+- CORE: cleaned and conformed data. Credit-blocked customers and discontinued products stop here.
+- MART: tables for reporting, one per Power BI table.
+
+## Run and status
+- The pipeline starts at 05:00. Every step writes one row into ctl.dwh_control.
+- A step that fails is logged as FAILED with the Oracle error. Steps that depend on it are SKIPPED.
+- The status must be readable for people who are not data engineers, and available by 06:00.
+- A successful step that finishes after 06:00:00 counts as late. A step that finishes at exactly 06:00:00 is on time.
+- Lateness is reported in started minutes: a step that finishes at 06:00:30 is 1 min late.
+- Failed and skipped steps are reported as FAILED or SKIPPED, never as late.
+
+## Naming
+- Step names: layer prefix plus table, for example `core_orders`.
+- SQL files are numbered per layer and run in the order of pipeline.py.
+- No SELECT * in SQL files. Explicit column lists only.
+
+## Errors
+- Bad source rows (duplicates, amounts of 0 or less, unknown customers) are reported before the Monday review.
+- A rerun of any step must give the same result (idempotent).</code></pre><h3>.agents/skills/grill-me/SKILL.md</h3><pre class="codeblock"><code>---
+name: grill-me
+description: Interview the user relentlessly about a plan, ticket or design until nothing is silently assumed. Use when the user says "grill me" or wants to stress-test a plan before building.
+disable-model-invocation: true
+---
+
+&lt;!-- Adapted from github.com/mattpocock/skills (MIT). --&gt;
+
+Interview the user until you reach a shared understanding. Map the topic as a design tree:
+every decision branches into the decisions that hang off it.
+
+Work in rounds. The frontier is every decision whose prerequisites are already settled.
+Ask the whole frontier in one round: number each question and give your recommended answer.
+Then wait for the answers before the next round.
+
+Format of a round:
+
+Q1 - &lt;question title&gt;: &lt;question, with options if useful&gt;
+Recommended: &lt;your answer&gt;
+
+Rules:
+- Facts are your job, not the user's. Look them up in the repo with your read and search tools
+  instead of asking.
+- Decisions are the user's. Put each to them and wait.
+- Done when the frontier is empty: every branch visited, nothing silently assumed.
+- Do not act on the result until the user confirms the shared understanding.</code></pre><p class="tip"><i class="ph ph-lightbulb" aria-hidden="true"></i><span><strong>Note:</strong> The Confluence pages and all tickets are invented for this lab. Replace them with real artifacts of your team when you repeat the exercise on your own code.</span></p></div></div></div></section></div><script>
+document.querySelectorAll('.prompt, .codeblock').forEach(function(el){
+  var b=document.createElement('button');b.type='button';b.className='copybtn';b.setAttribute('aria-label','Copy');b.innerHTML='<i class="ph ph-copy"></i>';
+  el.style.position='relative';el.appendChild(b);
+  b.addEventListener('click',function(){
+    var t=el.classList.contains('prompt')?el.querySelector('.prompt__text').textContent:el.querySelector('code').textContent;
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.innerHTML='<i class="ph ph-check"></i>';setTimeout(function(){b.innerHTML='<i class="ph ph-copy"></i>'},1200)}).catch(function(){});
+  });
+});
+</script>
+<script>
+// component: accordion
+/* valantic CI · components/accordion · print/PDF shows every panel open, restores afterwards */
+(function () {
+  var closed = [];
+  window.addEventListener("beforeprint", function () {
+    closed = [].slice.call(document.querySelectorAll(".accordion__item:not([open])"));
+    closed.forEach(function (d) { d.open = true; });
+  });
+  window.addEventListener("afterprint", function () { closed.forEach(function (d) { d.open = false; }); closed = []; });
+})();
+
+// component: checklist
+/* valantic CI · components/checklist — optional: remember ticks per viewer (data-checklist-key) */
+(function () {
+  document.querySelectorAll(".checklist[data-checklist-key]").forEach(function (list) {
+    var key = "checklist:" + list.dataset.checklistKey, boxes = [].slice.call(list.querySelectorAll(".checklist__input")), state = [];
+    try { state = JSON.parse(localStorage.getItem(key)) || []; } catch (e) {}
+    boxes.forEach(function (b, i) {
+      b.checked = !!state[i];
+      b.addEventListener("change", function () { state[i] = b.checked; try { localStorage.setItem(key, JSON.stringify(state)); } catch (e) {} });
+    });
+  });
+})();
+
+// component: navigation-sidebar
+/* ==========================================================================
+   valantic CI · components/navigation-sidebar · script.js
+   Ein-/Ausklappen (Zustand je Betrachter gespeichert), Level-2-Akkordeon bzw.
+   Flyout, aktiver Eintrag, mobiles Einblenden. Theme/Route steuert core/template.
+   ========================================================================== */
+(function () {
+  var body = document.body;
+  if (!document.getElementById('sidebar')) return;
+  function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function read(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  // Ein- und Ausklappen
+  var toggle = document.getElementById('sbToggle');
+  function closeSubs() { document.querySelectorAll('.sb__link[aria-controls^="sb-sub"]').forEach(function (b) { b.setAttribute('aria-expanded','false'); document.getElementById(b.getAttribute('aria-controls')).hidden = true; }); }
+  // Level 2 mit aktivem Eintrag bleibt im ausgeklappten Menü geöffnet
+  function openActiveGroup() {
+    document.querySelectorAll('.sb__link.has-active').forEach(function (x) { x.classList.remove('has-active'); });
+    var act = document.querySelector('.sb__sub .sb__link.is-active');
+    if (!act) return;
+    var sub = act.closest('.sb__sub'), parent = document.querySelector('[aria-controls="' + sub.id + '"]');
+    parent.classList.add('has-active');
+    if (!body.classList.contains('sb-collapsed') || window.matchMedia('(max-width:1024px)').matches) {
+      sub.hidden = false; parent.setAttribute('aria-expanded','true');
+    }
+  }
+  function setCollapsed(c) {
+    body.classList.toggle('sb-collapsed', c);
+    toggle.setAttribute('aria-expanded', String(!c));
+    toggle.setAttribute('aria-label', c ? 'Navigation ausklappen' : 'Navigation einklappen');
+    toggle.innerHTML = '<i class="ph ph-sidebar-simple"></i>';   // same symbol in both states (label/aria tell the action)
+    closeSubs(); openActiveGroup(); store('vci-sb-collapsed', c ? '1' : '0');
+  }
+  toggle.addEventListener('click', function () { setCollapsed(!body.classList.contains('sb-collapsed')); });
+
+  // Unterpunkte: ausgeklappt als Akkordeon, eingeklappt als Flyout
+  document.querySelectorAll('.sb__link[aria-controls^="sb-sub"]').forEach(function (b) {
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = b.getAttribute('aria-expanded') === 'true';
+      var collapsed = body.classList.contains('sb-collapsed') && !window.matchMedia('(max-width:1024px)').matches;
+      if (open && !collapsed && b.classList.contains('has-active')) return;   // Gruppe mit aktivem Eintrag bleibt offen
+      if (collapsed) closeSubs();
+      b.setAttribute('aria-expanded', String(!open));
+      document.getElementById(b.getAttribute('aria-controls')).hidden = open;
+    });
+  });
+  document.addEventListener('click', function (e) { if (body.classList.contains('sb-collapsed') && !e.target.closest('.sb__sub')) closeSubs(); });
+
+  // Aktiver Eintrag
+  document.querySelectorAll('.sb__link[href]').forEach(function (a) {
+    a.addEventListener('click', function () {
+      document.querySelectorAll('.sb__link.is-active').forEach(function (x) { x.classList.remove('is-active'); });
+      a.classList.add('is-active');
+      if (body.classList.contains('sb-collapsed')) closeSubs();   // eingeklappt: Flyout schließen
+      openActiveGroup(); setMobile(false);
+    });
+  });
+
+  // Mobil: einblendbar
+  var openBtn = document.getElementById('sbOpen');
+  function setMobile(o) { body.classList.toggle('sb-mobile-open', o); openBtn.setAttribute('aria-expanded', String(o)); }
+  openBtn.addEventListener('click', function () { setMobile(true); });
+  document.getElementById('sbScrim').addEventListener('click', function () { setMobile(false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { setMobile(false); closeSubs(); } });
+
+  setCollapsed(read('vci-sb-collapsed') === '1');
+})();
+
+// component: steps
+/* valantic CI · components/steps — behaviour for .steps--check (guide checklist) and .steps-detail (documentation).
+   .steps--process needs no JS (only the check icon is added to done markers). */
+(function () {
+  // every marker gets a Phosphor Light check (shown when the step is done)
+  document.querySelectorAll(".steps__marker").forEach(function (m) {
+    if (!m.querySelector(".steps__num")) { m.innerHTML = '<span class="steps__num">' + m.textContent.trim() + "</span>"; }
+    if (!m.querySelector(".steps__check")) m.insertAdjacentHTML("beforeend", '<i class="ph ph-check steps__check" aria-hidden="true"></i>');
+  });
+
+  /* ---------- 1 · Guide checklist ---------- */
+  document.querySelectorAll(".steps--check").forEach(function (list) {
+    var key = list.dataset.stepsKey, items = [].slice.call(list.querySelectorAll(":scope > .steps__item"));
+    var labelDone = list.dataset.labelDone || "Als erledigt markieren", labelUndo = list.dataset.labelUndo || "Wieder öffnen";
+    var state = [];
+    try { if (key) state = JSON.parse(localStorage.getItem("steps:" + key)) || []; } catch (e) {}
+
+    function save() { try { if (key) localStorage.setItem("steps:" + key, JSON.stringify(state)); } catch (e) {} }
+    function report() {
+      var done = state.filter(Boolean).length, total = items.length;
+      if (key) {
+        document.querySelectorAll('[data-steps-count="' + key + '"]').forEach(function (el) { el.textContent = done + " von " + total + " erledigt"; });
+        document.querySelectorAll('[data-steps-progress="' + key + '"]').forEach(function (el) { el.style.width = (done / total * 100) + "%"; });
+      }
+      list.dispatchEvent(new CustomEvent("stepschange", { bubbles:true, detail:{ done:done, total:total } }));
+    }
+    function paint() {
+      items.forEach(function (it, i) {
+        it.classList.toggle("is-done", !!state[i]);
+        it.classList.remove("is-current");
+        var b = it.querySelector(".steps__done"); if (b) b.textContent = state[i] ? labelUndo : labelDone;
+      });
+      var cur = items.findIndex(function (it, i) { return !state[i]; });
+      if (cur > -1) items[cur].classList.add("is-current");
+      report();
+    }
+    items.forEach(function (it, i) {
+      var d = it.querySelector(".steps__details"), b = it.querySelector(".steps__done");
+      var caret = it.querySelector(".steps__caret");
+      if (d) d.addEventListener("toggle", function () {                // accordion: one step open at a time
+        if (caret) { caret.classList.toggle("ph-caret-circle-up", d.open); caret.classList.toggle("ph-caret-circle-down", !d.open); }   // swap, no rotation
+        if (d.open) items.forEach(function (o) { var od = o.querySelector(".steps__details"); if (o !== it && od && od.open) od.open = false; });
+      });
+      if (b) b.addEventListener("click", function () {
+        state[i] = !state[i]; save(); paint();
+        if (!state[i]) return;                                          // re-opened: stay here
+        var next = items.findIndex(function (o, k) { return k > i && !state[k]; });
+        if (next < 0) next = items.findIndex(function (o, k) { return !state[k]; });
+        d.open = false;
+        if (next > -1) {                                                // auto-advance to the next open step
+          var nd = items[next].querySelector(".steps__details"); nd.open = true;
+          setTimeout(function () { items[next].scrollIntoView({ behavior:"smooth", block:"start" }); }, 60);
+        }
+      });
+    });
+    items.forEach(function (it, i) { state[i] = !!state[i]; });
+    paint();
+    var cur = items.findIndex(function (it, i) { return !state[i]; });
+    if (cur > -1 && !items.some(function (it) { var d = it.querySelector(".steps__details"); return d && d.open; })) {
+      items[cur].querySelector(".steps__details").open = true;
+    }
+  });
+
+  /* ---------- 2 · Documentation: list + detail panel ---------- */
+  var mq = window.matchMedia("(max-width:1024px)");
+  document.querySelectorAll(".steps-detail").forEach(function (wrap) {
+    var heads = [].slice.call(wrap.querySelectorAll(".steps__head")), panel = wrap.querySelector(".steps__panel"),
+        home = wrap.querySelector(".steps__panel-home"), current = 0;
+    heads.forEach(function (h, i) {
+      h.setAttribute("role", "tab"); h.setAttribute("aria-selected", "false");
+      h.addEventListener("click", function () { select(i, true); });
+      h.addEventListener("keydown", function (e) {
+        var vertical = !wrap.classList.contains("steps-detail--horizontal") || mq.matches;
+        var map = vertical ? { ArrowDown:1, ArrowUp:-1 } : { ArrowRight:1, ArrowLeft:-1 };
+        if (map[e.key]) { e.preventDefault(); select((i + map[e.key] + heads.length) % heads.length, true, true); }
+      });
+    });
+    function place() {
+      if (mq.matches) heads[current].closest(".steps__item").appendChild(panel); else home.appendChild(panel);
+    }
+    function select(i, user, focus) {
+      if (user && mq.matches && i === current && heads[i].getAttribute("aria-selected") === "true") { close(); return; }
+      current = i;
+      heads.forEach(function (h, k) { h.setAttribute("aria-selected", String(k === i)); h.tabIndex = k === i ? 0 : -1; });
+      wrap.querySelectorAll(".steps__content").forEach(function (c) { c.hidden = c.id !== heads[i].getAttribute("aria-controls"); });
+      panel.hidden = false; place();
+      if (focus) heads[i].focus();
+      if (user && mq.matches) setTimeout(function () { heads[i].scrollIntoView({ behavior:"smooth", block:"start" }); }, 30);
+    }
+    function close() { heads[current].setAttribute("aria-selected", "false"); panel.hidden = true; heads[current].focus(); }
+    var x = panel.querySelector(".steps__close"); if (x) x.addEventListener("click", close);
+    mq.addEventListener("change", function () { if (!panel.hidden) place(); });
+    select(0, false);
+  });
+})();
+
+// component: table
+/* valantic CI · components/table — editable cells: free text, status, rating (dropdown cells use components/dropdown).
+   Optional: data-table-key on .table-card saves the values per viewer; a switch [data-table-edit] toggles edit mode. */
+(function () {
+  function fixedUnder(anchor, el) {               // position a popover under its anchor (fixed → never clipped by the scroll area)
+    var r = anchor.getBoundingClientRect();
+    el.style.left = Math.min(r.left, window.innerWidth - el.offsetWidth - 8) + "px";
+    el.style.top = (r.bottom + 6 + el.offsetHeight > window.innerHeight ? r.top - el.offsetHeight - 6 : r.bottom + 6) + "px";
+  }
+  var openMenu = null;
+  function closeMenu(refocus) { if (!openMenu) return; openMenu.menu.hidden = true; openMenu.btn.setAttribute("aria-expanded", "false"); if (refocus) openMenu.btn.focus(); openMenu = null; }
+  document.addEventListener("click", function (e) { if (openMenu && !openMenu.menu.contains(e.target) && !openMenu.btn.contains(e.target)) closeMenu(); });
+  window.addEventListener("scroll", function () { if (openMenu) fixedUnder(openMenu.btn, openMenu.menu); }, true);
+  window.addEventListener("resize", function () { closeMenu(); });
+
+  document.querySelectorAll(".table-card").forEach(function (card, ci) {
+    var key = card.dataset.tableKey, store = {};
+    try { if (key) store = JSON.parse(localStorage.getItem("table:" + key)) || {}; } catch (e) {}
+    function save(id, v) { if (!key) return; store[id] = v; try { localStorage.setItem("table:" + key, JSON.stringify(store)); } catch (e) {} }
+    function emit(el, value) { el.dispatchEvent(new CustomEvent("tablechange", { bubbles:true, detail:{ value:value } })); }
+    var locked = function () { return card.classList.contains("table--locked"); };
+
+    /* 1 · free text (textareas grow with their content) */
+    card.querySelectorAll(".table-field").forEach(function (f, i) {
+      var id = "f" + i; if (store[id] !== undefined) f.value = store[id];
+      function grow() { if (f.tagName === "TEXTAREA") { f.style.height = "auto"; f.style.height = f.scrollHeight + "px"; } }
+      f.addEventListener("input", function () { grow(); save(id, f.value); emit(f, f.value); }); grow();
+      window.addEventListener("load", grow); window.addEventListener("resize", grow);           // re-measure once layout/fonts are final
+      if (window.ResizeObserver) new ResizeObserver(grow).observe(f.closest("td") || f);
+    });
+
+    /* 2 · dropdown cells: remember value */
+    card.querySelectorAll(".dropdown").forEach(function (dd, i) {
+      var id = "d" + i;
+      if (store[id] !== undefined) { var o = [].slice.call(dd.querySelectorAll(".dropdown__option")).filter(function (x) { return (x.dataset.value || x.textContent.trim()) === store[id]; })[0]; if (o) setTimeout(function () { o.click(); dd.querySelector(".dropdown__list").hidden = true; dd.querySelector(".dropdown__button").setAttribute("aria-expanded","false"); }, 0); }
+      dd.addEventListener("change", function (e) { save(id, e.detail.value); });
+    });
+
+    /* 3 · status */
+    card.querySelectorAll(".table-status").forEach(function (btn, i) {
+      var id = "s" + i, opts = (btn.dataset.options || "Geplant:neutral|Aktuell:outline|Abgeschlossen:gradient").split("|").map(function (s) { var p = s.split(":"); return { label:p[0], look:p[1] || "neutral" }; });
+      var cls = { neutral:"badge badge-neutral", outline:"badge badge-outline", gradient:"badge" };
+      var cur = store[id] !== undefined ? store[id] : (btn.dataset.value || opts[0].label);
+      var menu = document.createElement("ul"); menu.className = "table-menu"; menu.setAttribute("role", "listbox"); menu.hidden = true;
+      menu.innerHTML = opts.map(function (o) { return '<li class="table-menu__item" role="option" data-v="' + o.label + '"><span class="' + cls[o.look] + '">' + o.label + '</span><i class="ph ph-check" aria-hidden="true"></i></li>'; }).join("");
+      card.appendChild(menu);                       // inside the card → inherits route/theme colors
+      btn.setAttribute("aria-haspopup", "listbox"); btn.setAttribute("aria-expanded", "false");
+      function render() {
+        var o = opts.filter(function (x) { return x.label === cur; })[0] || opts[0];
+        btn.innerHTML = '<span class="' + cls[o.look] + '">' + o.label + '</span><i class="ph ph-caret-down table-status__caret" aria-hidden="true"></i>';
+        btn.setAttribute("aria-label", "Status: " + o.label);
+        menu.querySelectorAll(".table-menu__item").forEach(function (li) { li.setAttribute("aria-selected", String(li.dataset.v === cur)); });
+      }
+      function choose(v) { cur = v; render(); save(id, v); emit(btn, v); closeMenu(true); }
+      btn.addEventListener("click", function (e) {
+        if (locked() || btn.getAttribute("aria-disabled") === "true") return;
+        e.stopPropagation(); if (openMenu && openMenu.btn === btn) { closeMenu(); return; } closeMenu();
+        menu.hidden = false; fixedUnder(btn, menu); btn.setAttribute("aria-expanded", "true"); openMenu = { btn:btn, menu:menu };
+      });
+      btn.addEventListener("keydown", function (e) {
+        if (!openMenu || openMenu.btn !== btn) return;
+        var items = [].slice.call(menu.querySelectorAll(".table-menu__item")), f = items.findIndex(function (x) { return x.classList.contains("is-focused"); });
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); f = (f + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length; items.forEach(function (x, k) { x.classList.toggle("is-focused", k === f); }); }
+        else if (e.key === "Enter" && f > -1) { e.preventDefault(); choose(items[f].dataset.v); }
+        else if (e.key === "Escape") { e.preventDefault(); closeMenu(true); }
+      });
+      menu.addEventListener("click", function (e) { var li = e.target.closest(".table-menu__item"); if (li) choose(li.dataset.v); });
+      render();
+    });
+
+    /* 4 · rating 1–7 */
+    card.querySelectorAll(".table-rating").forEach(function (r, i) {
+      var id = "r" + i, max = Math.min(7, Math.max(1, +r.dataset.max || 5)), val = store[id] !== undefined ? store[id] : (+r.dataset.value || 0);
+      var ro = function () { return r.hasAttribute("data-readonly") || locked(); };
+      r.setAttribute("role", "slider"); r.setAttribute("aria-valuemin", "0"); r.setAttribute("aria-valuemax", String(max)); r.tabIndex = 0;
+      r.innerHTML = Array.from({ length:max }, function (_, k) { return '<span class="table-rating__pt" data-n="' + (k + 1) + '"></span>'; }).join("") + '<span class="table-rating__num"></span>';
+      var pts = [].slice.call(r.querySelectorAll(".table-rating__pt")), num = r.querySelector(".table-rating__num");
+      function paint(v, preview) { pts.forEach(function (p, k) { p.classList.toggle("is-on", k < v); }); r.classList.toggle("is-preview", !!preview); num.textContent = v + " / " + max; }
+      function set(v) { val = Math.max(0, Math.min(max, v)); paint(val); r.setAttribute("aria-valuenow", String(val)); r.setAttribute("aria-valuetext", val + " von " + max); save(id, val); emit(r, val); }
+      if (!r.hasAttribute("data-show-number") && r.dataset.look !== "number") num.hidden = true;
+      pts.forEach(function (p) {
+        p.addEventListener("mouseenter", function () { if (!ro()) paint(+p.dataset.n, true); });
+        p.addEventListener("click", function () { if (!ro()) set(+p.dataset.n === val ? 0 : +p.dataset.n); });   // click the current value again → 0
+      });
+      r.addEventListener("mouseleave", function () { paint(val); });
+      r.addEventListener("keydown", function (e) {
+        if (ro()) return;
+        var d = { ArrowRight:1, ArrowUp:1, ArrowLeft:-1, ArrowDown:-1 }[e.key];
+        if (d) { e.preventDefault(); set(val + d); } else if (e.key === "Home") { e.preventDefault(); set(0); } else if (e.key === "End") { e.preventDefault(); set(max); }
+        else if (/^[0-7]$/.test(e.key)) { set(+e.key); }
+      });
+      paint(val); r.setAttribute("aria-valuenow", String(val)); r.setAttribute("aria-valuetext", val + " von " + max);
+    });
+
+    /* edit mode switch */
+    var sw = card.querySelector("[data-table-edit]");
+    function applyEdit() {
+      var on = !sw || sw.checked; card.classList.toggle("table--locked", !on);
+      card.querySelectorAll(".table-field").forEach(function (f) { f.readOnly = !on; });
+      card.querySelectorAll(".table-rating").forEach(function (r) { r.tabIndex = on && !r.hasAttribute("data-readonly") ? 0 : -1; });
+      if (!on) closeMenu();
+    }
+    if (sw) sw.addEventListener("change", applyEdit); applyEdit();
+  });
+})();
+</script>
+</body>
+</html>
