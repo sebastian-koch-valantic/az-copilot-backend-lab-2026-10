@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS mart.dim_customer;
+CREATE TABLE mart.dim_customer AS
+SELECT CUSTOMER_ID, SEGMENT, REGION, CREDIT_LIMIT_EUR
+FROM core.customers;

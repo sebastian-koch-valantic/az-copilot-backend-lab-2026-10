@@ -1,0 +1,6 @@
+DROP TABLE IF EXISTS mart.fact_orders;
+CREATE TABLE mart.fact_orders AS
+SELECT o.ORDER_ID, o.PRODUCT_ID, o.CUSTOMER_ID, o.ORDER_DATE, o.AMOUNT_EUR,
+       p.PRODUCT_LINE, p.SALES_CHANNEL
+FROM core.orders o
+JOIN core.products p ON p.PRODUCT_ID = o.PRODUCT_ID;

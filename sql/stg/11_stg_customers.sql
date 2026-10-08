@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS stg.customers;
+CREATE TABLE stg.customers AS
+SELECT CUSTOMER_ID, SEGMENT, REGION, CREDIT_LIMIT_EUR, CREDIT_BLOCK,
+       datetime('now') AS LOADED_AT
+FROM src.customers;

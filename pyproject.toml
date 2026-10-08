@@ -1,0 +1,24 @@
+[project]
+name = "az-copilot-backend-lab-2026-10"
+version = "0.1.0"
+description = "Workshop sandbox: a small DWH pipeline (simulated Oracle source, SQL layers, Python orchestration, Power BI model docs)."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2.7"]
+
+[project.scripts]
+dwh = "dwhpulse.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dwhpulse"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
